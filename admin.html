@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestão – Colégio Plenus</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/admin.js" defer></script>
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+
+<!-- OVERLAY mobile -->
+<div id="overlay" class="overlay" onclick="closeSidebar()"></div>
+
+<!-- MODAL de turma -->
+<div id="turma-modal-overlay" class="modal-overlay" style="z-index:700" onclick="fecharTurmaModalClick(event)">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-header">
+      <div><h2 style="font-size:1rem" id="turma-modal-titulo">Nova Turma</h2></div>
+      <button class="btn-modal-close" onclick="fecharTurmaModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="turma-modal-alert"></div>
+      <div class="form-grid" style="gap:0.875rem">
+        <div class="form-group">
+          <label>Segmento *</label>
+          <select id="turma-segmento" onchange="atualizarSeriesTurma()">
+            <option value="">Selecione...</option>
+            <option value="educacao_infantil">Educação Infantil</option>
+            <option value="fundamental1">Fundamental 1</option>
+            <option value="fundamental2">Fundamental 2</option>
+            <option value="ensino_medio">Ensino Médio</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Série / Ano *</label>
+          <select id="turma-serie" disabled>
+            <option value="">Selecione o segmento primeiro</option>
+          </select>
+        </div>
+        <div class="form-group full-width">
+          <label>Nome da Turma *</label>
+          <input type="text" id="turma-nome" placeholder="Ex: Turma A, Turma B, Manhã...">
+        </div>
+        <div class="form-group">
+          <label>Turno *</label>
+          <select id="turma-turno">
+            <option value="">Selecione...</option>
+            <option value="manha">☀️ Manhã</option>
+            <option value="tarde">🌤️ Tarde</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Capacidade máxima</label>
+          <input type="number" id="turma-capacidade" value="30" min="1" max="99">
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:0.75rem;margin-top:1.25rem">
+        <button class="btn btn-secondary" onclick="fecharTurmaModal()">Cancelar</button>
+        <button class="btn btn-primary" id="btn-salvar-turma" onclick="salvarTurma()">💾 Salvar Turma</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL de alocação -->
+<div id="alocar-modal-overlay" class="modal-overlay" style="z-index:700" onclick="fecharAlocarModalClick(event)">
+  <div class="modal-box" style="max-width:500px">
+    <div class="modal-header">
+      <div>
+        <h2 style="font-size:1rem" id="alocar-modal-titulo">Enturmar Aluno</h2>
+        <p style="font-size:0.78rem;color:var(--gray-dark);margin-top:0.15rem" id="alocar-modal-subtitulo"></p>
+      </div>
+      <button class="btn-modal-close" onclick="fecharAlocarModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="alocar-modal-alert"></div>
+      <div class="form-group" style="margin-bottom:1.25rem">
+        <label>Selecione a Turma *</label>
+        <select id="alocar-turma-select">
+          <option value="">Carregando turmas...</option>
+        </select>
+      </div>
+      <div id="alocar-turma-info" style="display:none;background:var(--white-smoke);border:1px solid var(--gray-light);border-radius:var(--radius-sm);padding:0.75rem;font-size:0.82rem;margin-bottom:1.25rem"></div>
+      <div style="display:flex;justify-content:flex-end;gap:0.75rem">
+        <button class="btn btn-secondary" onclick="fecharAlocarModal()">Cancelar</button>
+        <button class="btn btn-success" id="btn-confirmar-alocacao" onclick="confirmarAlocacao()">🏫 Confirmar Enturmar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL de guia de orientação -->
+<div id="guia-modal-overlay" class="modal-overlay" style="z-index:650" onclick="fecharGuiaModalClick(event)">
+  <div class="modal-box" style="max-width:600px" id="guia-modal-box">
+    <div class="modal-header">
+      <div>
+        <h2 style="font-size:1rem" id="guia-modal-titulo"></h2>
+        <p style="font-size:0.78rem;color:var(--gray-dark);margin-top:0.15rem" id="guia-modal-subtitulo"></p>
+      </div>
+      <button class="btn-modal-close" onclick="fecharGuiaModal()">✕</button>
+    </div>
+    <div class="modal-body" id="guia-modal-body"></div>
+  </div>
+</div>
+
+<!-- MODAL unificado: confirmação de status + nota -->
+<div id="acao-modal-overlay" class="modal-overlay" style="z-index:700" onclick="fecharAcaoModalClick(event)">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-header">
+      <div>
+        <h2 style="font-size:1rem" id="acao-modal-titulo"></h2>
+        <p style="font-size:0.78rem;color:var(--gray-dark);margin-top:0.15rem" id="acao-modal-subtitulo"></p>
+      </div>
+      <button class="btn-modal-close" onclick="fecharAcaoModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="acao-modal-alerta" style="padding:0.75rem 1rem;border-radius:var(--radius-sm);margin-bottom:1.25rem;font-size:0.845rem;line-height:1.55;font-weight:500"></div>
+      <div class="form-group" style="margin-bottom:1.25rem">
+        <label for="acao-modal-textarea">Mensagem para o histórico</label>
+        <textarea id="acao-modal-textarea" rows="4" placeholder="Digite a nota..."></textarea>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:0.75rem">
+        <button class="btn btn-secondary" onclick="fecharAcaoModal()">Cancelar</button>
+        <button class="btn btn-primary" id="btn-confirmar-acao">✔ Confirmar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL de nota avulsa (+ Adicionar Nota) -->
+<div id="obs-modal-overlay" class="modal-overlay" onclick="fecharObsModalClick(event)" style="z-index:600">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-header">
+      <div>
+        <h2 style="font-size:1rem">📝 Adicionar Nota</h2>
+        <p style="font-size:0.78rem;color:var(--gray-dark);margin-top:0.15rem">Será registrada no histórico desta solicitação</p>
+      </div>
+      <button class="btn-modal-close" onclick="fecharObsModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:1.25rem">
+        <label for="obs-modal-textarea">Nota</label>
+        <textarea id="obs-modal-textarea" rows="5" placeholder="Digite a nota..."></textarea>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:0.75rem">
+        <button class="btn btn-secondary" onclick="fecharObsModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmarSalvarObservacao()" id="btn-confirmar-obs">
+          💾 Salvar Nota
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL de detalhe -->
+<div id="modal-overlay" class="modal-overlay" onclick="fecharModalClick(event)">
+  <div class="modal-box" id="modal-box">
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<div id="app">
+
+  <!-- =================== SIDEBAR =================== -->
+  <aside id="sidebar" class="sidebar">
+
+    <div class="sidebar-logo">
+      <span class="logo-icon">🏫</span>
+      <div>
+        <div class="logo-text">Colégio Plenus</div>
+        <div class="logo-subtitle" style="color:#f97316;font-weight:700;letter-spacing:0.08em">⚙ GESTÃO</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <button class="nav-item active" onclick="showSection('overview')" data-section="overview">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-text">Início</span>
+      </button>
+      <button class="nav-item" onclick="showSection('solicitacoes')" data-section="solicitacoes">
+        <span class="nav-icon">⚙️</span>
+        <span class="nav-text">Gestão</span>
+      </button>
+      <button class="nav-item" onclick="showSection('enturmar')" data-section="enturmar">
+        <span class="nav-icon">🏫</span>
+        <span class="nav-text">Enturmar</span>
+      </button>
+      <button class="nav-item" onclick="showSection('relatorios')" data-section="relatorios">
+        <span class="nav-icon">📈</span>
+        <span class="nav-text">Relatórios</span>
+      </button>
+      <button class="nav-item" onclick="showSection('logs')" data-section="logs">
+        <span class="nav-icon">📊</span>
+        <span class="nav-text">Atividade</span>
+      </button>
+      <button class="nav-item" onclick="showSection('perfil')" data-section="perfil">
+        <span class="nav-icon">👤</span>
+        <span class="nav-text">Meu Perfil</span>
+      </button>
+    </nav>
+
+    <div style="padding: 0 0.75rem 0.75rem">
+      <a href="dashboard.html" class="btn-trocar-painel">
+        <span>🏠</span>
+        <span>Portal do Responsável</span>
+      </a>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div>
+          <div class="user-name" id="sidebar-nome">Carregando...</div>
+          <div class="user-email" id="sidebar-email"></div>
+          <div style="font-size:0.65rem;color:#f97316;font-weight:700;margin-top:0.15rem;text-transform:uppercase;letter-spacing:0.06em" id="sidebar-cargo"></div>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="logout()">
+        🚪 Sair da conta
+      </button>
+    </div>
+
+  </aside>
+
+  <!-- =================== MAIN =================== -->
+  <main id="main-content">
+
+    <!-- TOPBAR mobile -->
+    <header class="topbar">
+      <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Menu">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" d="M3 12h18M3 6h18M3 18h18"/>
+        </svg>
+      </button>
+      <span class="topbar-title">Gestão</span>
+      <div></div>
+    </header>
+
+    <!-- ======= SEÇÃO: INÍCIO ======= -->
+    <div id="section-overview" class="section active">
+      <div class="section-header">
+        <h1>Painel de Gestão</h1>
+        <p>Visão geral das solicitações de vagas</p>
+      </div>
+
+      <div class="stats-grid-5">
+        <div class="stat-card blue" style="cursor:pointer" onclick="irParaSolicitacoes('')">
+          <div class="stat-icon-wrap">📋</div>
+          <div class="stat-value" id="stat-total">–</div>
+          <div class="stat-label">Total</div>
+        </div>
+        <div class="stat-card amber" style="cursor:pointer" onclick="irParaSolicitacoes('pendente')">
+          <div class="stat-icon-wrap">⏳</div>
+          <div class="stat-value" id="stat-pendente">–</div>
+          <div class="stat-label">Pendentes</div>
+        </div>
+        <div class="stat-card blue" style="cursor:pointer" onclick="irParaSolicitacoes('em_analise')">
+          <div class="stat-icon-wrap">🔍</div>
+          <div class="stat-value" id="stat-analise">–</div>
+          <div class="stat-label">Em Análise</div>
+        </div>
+        <div class="stat-card green" style="cursor:pointer" onclick="irParaSolicitacoes('aprovado')">
+          <div class="stat-icon-wrap">✅</div>
+          <div class="stat-value" id="stat-aprovado">–</div>
+          <div class="stat-label">Aprovadas</div>
+        </div>
+        <div class="stat-card red" style="cursor:pointer" onclick="irParaSolicitacoes('reprovado')">
+          <div class="stat-icon-wrap">✕</div>
+          <div class="stat-value" id="stat-reprovado">–</div>
+          <div class="stat-label">Reprovadas</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📌 Ações Rápidas</div>
+        <div style="display:flex; gap:0.75rem; flex-wrap:wrap">
+          <button class="btn btn-secondary" onclick="irParaSolicitacoes('pendente')">
+            ⏳ Ver Pendentes
+          </button>
+          <button class="btn btn-secondary" onclick="irParaSolicitacoes('em_analise')">
+            🔍 Ver Em Análise
+          </button>
+          <button class="btn btn-primary" onclick="irParaSolicitacoes('')">
+            📋 Todas as Solicitações
+          </button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:1.25rem">
+        <div class="card-title">⏰ Últimas Solicitações</div>
+        <div id="ultimas-solicitacoes">
+          <div class="empty-state" style="padding:1.5rem"><span class="empty-icon">⏳</span><p>Carregando...</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======= SEÇÃO: GESTÃO ======= -->
+    <div id="section-solicitacoes" class="section">
+      <div class="section-header">
+        <h1>Gestão de Solicitações</h1>
+        <p>Gerencie e atualize o status das solicitações de vaga</p>
+      </div>
+
+      <div class="filter-bar">
+        <input type="text" id="busca-input" placeholder="🔍 Buscar por responsável, aluno ou e-mail..."
+          oninput="filtrarSolicitacoes()">
+        <select id="filtro-status" onchange="filtrarSolicitacoes()">
+          <option value="">Todos os status</option>
+          <option value="pendente">⏳ Pendente</option>
+          <option value="em_analise">🔍 Em Análise</option>
+          <option value="aprovado">✅ Aprovado</option>
+          <option value="reprovado">✕ Reprovado</option>
+        </select>
+        <button class="btn btn-secondary btn-sm" onclick="carregarSolicitacoes()">↺ Atualizar</button>
+      </div>
+
+      <div id="solicitacoes-count" style="font-size:0.8rem;color:var(--gray-dark);margin-bottom:0.875rem"></div>
+
+      <div id="solicitacoes-list" class="solicitacoes-list">
+        <div class="empty-state"><span class="empty-icon">⏳</span><p>Carregando...</p></div>
+      </div>
+    </div>
+
+    <!-- ======= SEÇÃO: ENTURMAR ======= -->
+    <div id="section-enturmar" class="section">
+      <div class="section-header">
+        <h1>Enturmar Alunos</h1>
+        <p>Gerencie turmas e aloque alunos aprovados</p>
+      </div>
+
+      <!-- Tabs -->
+      <div class="enturmar-tabs">
+        <button class="enturmar-tab active" onclick="switchEnturmarTab('turmas')" id="tab-turmas">🏫 Turmas</button>
+        <button class="enturmar-tab" onclick="switchEnturmarTab('alocacao')" id="tab-alocacao">🎒 Alocação de Alunos</button>
+      </div>
+
+      <!-- Aba: Turmas -->
+      <div id="enturmar-turmas">
+        <div class="card" style="margin-bottom:1.25rem">
+          <div class="card-title" style="justify-content:space-between">
+            <span>Turmas Cadastradas</span>
+            <button class="btn btn-primary btn-sm" onclick="abrirModalTurma()">+ Nova Turma</button>
+          </div>
+
+          <div class="filter-bar" style="margin-bottom:1rem">
+            <select id="filtro-segmento-turmas" onchange="renderTurmas()">
+              <option value="">Todos os segmentos</option>
+              <option value="educacao_infantil">Educação Infantil</option>
+              <option value="fundamental1">Fundamental 1</option>
+              <option value="fundamental2">Fundamental 2</option>
+              <option value="ensino_medio">Ensino Médio</option>
+            </select>
+          </div>
+
+          <div id="turmas-lista">
+            <div class="empty-state" style="padding:1.5rem"><span class="empty-icon">⏳</span><p>Carregando...</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Aba: Alocação -->
+      <div id="enturmar-alocacao" style="display:none">
+        <div class="card" style="margin-bottom:1.25rem">
+          <div class="card-title">🎒 Alunos Aprovados Aguardando Enturmar</div>
+          <div class="filter-bar" style="margin-bottom:1rem">
+            <input type="text" id="busca-alocacao" placeholder="🔍 Buscar aluno ou responsável..." oninput="renderAlocacao()">
+            <select id="filtro-segmento-alocacao" onchange="renderAlocacao()">
+              <option value="">Todos os segmentos</option>
+              <option value="educacao_infantil">Educação Infantil</option>
+              <option value="fundamental1">Fundamental 1</option>
+              <option value="fundamental2">Fundamental 2</option>
+              <option value="ensino_medio">Ensino Médio</option>
+            </select>
+            <select id="filtro-alocado" onchange="renderAlocacao()">
+              <option value="">Todos</option>
+              <option value="nao">Aguardando alocação</option>
+              <option value="sim">Já enturmados</option>
+            </select>
+          </div>
+          <div id="alocacao-lista">
+            <div class="empty-state" style="padding:1.5rem"><span class="empty-icon">⏳</span><p>Carregando...</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======= SEÇÃO: RELATÓRIOS ======= -->
+    <div id="section-relatorios" class="section">
+      <div class="section-header">
+        <h1>Relatório Analítico</h1>
+        <p>Visão estratégica das solicitações de vagas</p>
+      </div>
+
+      <!-- KPIs -->
+      <div class="rel-kpi-grid" id="rel-kpis">
+        <div class="rel-kpi-card">
+          <div class="rel-kpi-icon">📋</div>
+          <div class="rel-kpi-value" id="rel-kpi-total">–</div>
+          <div class="rel-kpi-label">Total de Solicitações</div>
+        </div>
+        <div class="rel-kpi-card green">
+          <div class="rel-kpi-icon">✅</div>
+          <div class="rel-kpi-value" id="rel-kpi-taxa">–</div>
+          <div class="rel-kpi-label">Taxa de Aprovação</div>
+        </div>
+        <div class="rel-kpi-card blue">
+          <div class="rel-kpi-icon">🎒</div>
+          <div class="rel-kpi-value" id="rel-kpi-alunos">–</div>
+          <div class="rel-kpi-label">Total de Alunos</div>
+        </div>
+        <div class="rel-kpi-card orange">
+          <div class="rel-kpi-icon">💰</div>
+          <div class="rel-kpi-value" id="rel-kpi-ticket">–</div>
+          <div class="rel-kpi-label">Ticket Médio Mensalidade</div>
+        </div>
+      </div>
+
+      <!-- Linha 1: Status + Segmentos -->
+      <div class="rel-row-2">
+        <div class="card rel-chart-card">
+          <div class="card-title">📊 Solicitações por Status</div>
+          <div class="rel-chart-wrap">
+            <canvas id="chart-status"></canvas>
+          </div>
+        </div>
+        <div class="card rel-chart-card">
+          <div class="card-title">🏫 Solicitações por Segmento</div>
+          <div class="rel-chart-wrap">
+            <canvas id="chart-segmentos"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Linha 2: Séries + Turnos -->
+      <div class="rel-row-2">
+        <div class="card rel-chart-card">
+          <div class="card-title">📚 Séries Mais Solicitadas</div>
+          <div class="rel-chart-wrap rel-chart-tall">
+            <canvas id="chart-series"></canvas>
+          </div>
+        </div>
+        <div class="card rel-chart-card">
+          <div class="card-title">🌤️ Turnos Preferidos</div>
+          <div class="rel-chart-wrap">
+            <canvas id="chart-turnos"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Linha 3: Evolução mensal (largura total) -->
+      <div class="card" style="margin-bottom:1.5rem">
+        <div class="card-title">📅 Evolução de Solicitações por Mês</div>
+        <div class="rel-chart-wrap" style="height:220px">
+          <canvas id="chart-mensal"></canvas>
+        </div>
+      </div>
+
+      <!-- Linha 4: Motivos saída + Motivos Plenus -->
+      <div class="rel-row-2">
+        <div class="card rel-chart-card">
+          <div class="card-title">🚪 Motivos de Saída da Escola Anterior</div>
+          <div class="rel-chart-wrap rel-chart-tall">
+            <canvas id="chart-motivo-saida"></canvas>
+          </div>
+        </div>
+        <div class="card rel-chart-card">
+          <div class="card-title">⭐ Motivos de Escolha do Plenus</div>
+          <div class="rel-chart-wrap rel-chart-tall">
+            <canvas id="chart-motivo-plenus"></canvas>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ======= SEÇÃO: LOGS ======= -->
+    <div id="section-logs" class="section">
+      <div class="section-header">
+        <h1>Registro de Atividade</h1>
+        <p>Histórico completo de ações realizadas no sistema</p>
+      </div>
+
+      <!-- Stats de atividade -->
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.25rem" id="logs-stats">
+        <div class="stat-card blue">
+          <div class="stat-icon-wrap">📋</div>
+          <div class="stat-value" id="log-stat-total">–</div>
+          <div class="stat-label">Total de Ações</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-icon-wrap">👤</div>
+          <div class="stat-value" id="log-stat-responsaveis">–</div>
+          <div class="stat-label">Por Responsáveis</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon-wrap">⚙</div>
+          <div class="stat-value" id="log-stat-colaboradores">–</div>
+          <div class="stat-label">Por Colaboradores</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon-wrap">📅</div>
+          <div class="stat-value" id="log-stat-hoje">–</div>
+          <div class="stat-label">Hoje</div>
+        </div>
+      </div>
+
+      <!-- Filtros -->
+      <div class="filter-bar" style="margin-bottom:1.25rem">
+        <input type="text" id="log-busca" placeholder="🔍 Buscar por usuário, ação ou descrição..." oninput="filtrarLogs()">
+        <select id="log-filtro-tipo" onchange="filtrarLogs()">
+          <option value="">Todos os tipos</option>
+          <option value="colaborador">⚙ Colaboradores</option>
+          <option value="responsavel">👤 Responsáveis</option>
+        </select>
+        <select id="log-filtro-acao" onchange="filtrarLogs()">
+          <option value="">Todas as ações</option>
+          <option value="criar_solicitacao">📝 Nova solicitação</option>
+          <option value="editar_solicitacao">✏️ Edição</option>
+          <option value="alterar_status">🔖 Alteração de status</option>
+          <option value="observacao">📝 Nota</option>
+          <option value="editar_perfil">👤 Perfil</option>
+          <option value="login">🔐 Login</option>
+          <option value="logout">🚪 Logout</option>
+        </select>
+        <button class="btn btn-secondary btn-sm" onclick="carregarLogs()">↺ Atualizar</button>
+      </div>
+
+      <div id="log-count" style="font-size:0.8rem;color:var(--gray-dark);margin-bottom:0.875rem"></div>
+
+      <!-- Timeline de atividade -->
+      <div id="logs-timeline"></div>
+    </div>
+
+    <!-- ======= SEÇÃO: PERFIL ======= -->
+    <div id="section-perfil" class="section">
+      <div class="section-header">
+        <h1>Meu Perfil</h1>
+        <p>Informações do colaborador</p>
+      </div>
+
+      <div class="card" style="max-width:580px">
+        <div class="profile-header">
+          <div class="profile-info">
+            <h2 id="profile-nome-display">Seu nome</h2>
+            <p id="profile-cargo-display" style="color:var(--orange);font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em"></p>
+            <p id="profile-email-display" style="color:var(--gray);font-size:0.825rem;margin-top:0.15rem"></p>
+          </div>
+        </div>
+
+        <hr class="divider">
+        <div id="perfil-alert"></div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="perfil-nome">Nome completo</label>
+            <input type="text" id="perfil-nome" placeholder="Seu nome completo">
+          </div>
+          <div class="form-group">
+            <label for="perfil-telefone">Telefone / WhatsApp</label>
+            <input type="tel" id="perfil-telefone" placeholder="(00) 00000-0000">
+          </div>
+        </div>
+
+        <div style="margin-top:1.25rem">
+          <button class="btn btn-primary" onclick="salvarPerfil()" id="btn-salvar-perfil">
+            💾 Salvar Alterações
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+</body>
+</html>

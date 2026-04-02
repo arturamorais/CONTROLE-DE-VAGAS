@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro – Colégio Plenus</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/auth.js" defer></script>
+  <link rel="stylesheet" href="css/estilo.css">
+</head>
+<body>
+
+<div class="auth-layout">
+
+  <!-- PAINEL ESQUERDO -->
+  <div class="brand-panel">
+    <div class="brand-deco">
+      <div class="deco-circle c1"></div>
+      <div class="deco-circle c2"></div>
+      <div class="deco-circle c3"></div>
+    </div>
+    <div class="brand-body">
+      <div class="brand-logo">🏫</div>
+      <h1 class="brand-name">Colégio Plenus</h1>
+      <p class="brand-tagline">Crie sua conta e comece<br>a solicitar vagas hoje mesmo.</p>
+      <ul class="brand-features">
+        <li>
+          <span class="feat-icon">✦</span>
+          Cadastro rápido e seguro
+        </li>
+        <li>
+          <span class="feat-icon">✦</span>
+          Adicione múltiplos alunos em uma solicitação
+        </li>
+        <li>
+          <span class="feat-icon">✦</span>
+          Receba retorno direto da nossa equipe
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- PAINEL DIREITO -->
+  <div class="form-panel">
+    <div class="form-box">
+
+      <div class="form-header">
+        <span class="form-logo-sm">🏫</span>
+        <h2>Criar conta</h2>
+        <p>Preencha os dados para se cadastrar</p>
+      </div>
+
+      <div class="field">
+        <label for="nomeCadastro">Nome completo</label>
+        <div class="input-wrap">
+          <span class="input-icon">👤</span>
+          <input type="text" id="nomeCadastro" placeholder="Seu nome completo">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="emailCadastro">E-mail</label>
+        <div class="input-wrap">
+          <span class="input-icon">✉</span>
+          <input type="email" id="emailCadastro" placeholder="seu@email.com">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="telefoneCadastro">Telefone / WhatsApp</label>
+        <div class="input-wrap">
+          <span class="input-icon">📱</span>
+          <input type="tel" id="telefoneCadastro" placeholder="(00) 00000-0000">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="senhaCadastro">Senha</label>
+        <div class="input-wrap">
+          <span class="input-icon">🔒</span>
+          <input type="password" id="senhaCadastro" placeholder="Mínimo 6 caracteres">
+        </div>
+      </div>
+
+      <button class="btn-submit" onclick="cadastrar()">Criar minha conta</button>
+
+      <p class="form-footer">
+        Já tem conta? <a href="index.html">Fazer login</a>
+      </p>
+
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

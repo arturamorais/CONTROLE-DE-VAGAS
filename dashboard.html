@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard – Colégio Plenus</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/dashboard.js" defer></script>
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+
+<!-- OVERLAY mobile -->
+<div id="overlay" class="overlay" onclick="closeSidebar()"></div>
+
+<div id="app">
+
+  <!-- =================== SIDEBAR =================== -->
+  <aside id="sidebar" class="sidebar">
+
+    <div class="sidebar-logo">
+      <span class="logo-icon">🏫</span>
+      <div>
+        <div class="logo-text">Colégio Plenus</div>
+        <div class="logo-subtitle">Portal do Responsável</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <button class="nav-item active" onclick="showSection('overview')" data-section="overview">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-text">Início</span>
+      </button>
+      <button class="nav-item" onclick="showSection('nova-solicitacao')" data-section="nova-solicitacao">
+        <span class="nav-icon">📝</span>
+        <span class="nav-text">Nova Solicitação</span>
+      </button>
+      <button class="nav-item" onclick="showSection('minhas-solicitacoes')" data-section="minhas-solicitacoes">
+        <span class="nav-icon">📋</span>
+        <span class="nav-text">Minhas Solicitações</span>
+      </button>
+      <button class="nav-item" onclick="showSection('perfil')" data-section="perfil">
+        <span class="nav-icon">👤</span>
+        <span class="nav-text">Meu Perfil</span>
+      </button>
+    </nav>
+
+    <div id="btn-admin-wrap" style="padding: 0 0.75rem 0.75rem; display: none">
+      <a href="admin.html" class="btn-trocar-painel btn-trocar-admin">
+        <span>⚙</span>
+        <span>Painel de Gestão</span>
+      </a>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div>
+          <div class="user-name" id="sidebar-nome"></div>
+          <div class="user-email" id="sidebar-email"></div>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="logout()">
+        🚪 Sair da conta
+      </button>
+    </div>
+
+  </aside>
+
+  <!-- =================== MAIN =================== -->
+  <main id="main-content">
+
+    <!-- TOPBAR mobile -->
+    <header class="topbar">
+      <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Menu">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" d="M3 12h18M3 6h18M3 18h18"/>
+        </svg>
+      </button>
+      <span class="topbar-title">Colégio Plenus</span>
+      <div></div>
+    </header>
+
+    <!-- ======= SEÇÃO: INÍCIO ======= -->
+    <div id="section-overview" class="section active">
+      <div class="section-header">
+        <h1><span id="welcome-msg">Bem-vindo!</span></h1>
+        <p>Gerencie suas solicitações de vagas no Colégio Plenus</p>
+      </div>
+
+      <div class="welcome-banner">
+        <h2>Portal do Responsável 🏫</h2>
+        <p>Solicite vagas, acompanhe o status e gerencie tudo em um só lugar.</p>
+        <button class="btn btn-primary" onclick="showSection('nova-solicitacao')" style="position:relative;z-index:1">
+          📝 Nova Solicitação de Vaga
+        </button>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card blue">
+          <div class="stat-icon-wrap">📋</div>
+          <div class="stat-value" id="stat-solicitacoes">–</div>
+          <div class="stat-label">Solicitações</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-icon-wrap">🎒</div>
+          <div class="stat-value" id="stat-alunos">–</div>
+          <div class="stat-label">Alunos</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon-wrap">✅</div>
+          <div class="stat-value" id="stat-aprovados">–</div>
+          <div class="stat-label">Aprovadas</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📌 Como funciona</div>
+        <div class="steps">
+          <div class="step">
+            <div class="step-num">1</div>
+            <div>
+              <strong>Complete seu perfil</strong>
+              <p>Adicione seu nome e telefone para que possamos entrar em contato</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <div>
+              <strong>Faça uma solicitação de vaga</strong>
+              <p>Informe os dados dos alunos, segmentos desejados e informações sobre mensalidade</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <div>
+              <strong>Aguarde o retorno</strong>
+              <p>Nossa equipe analisará sua solicitação e entrará em contato em breve</p>
+            </div>
+          </div>
+        </div>
+        <hr class="divider">
+        <button class="btn btn-primary" onclick="showSection('nova-solicitacao')">
+          📝 Nova Solicitação de Vaga
+        </button>
+      </div>
+    </div>
+
+    <!-- ======= SEÇÃO: NOVA SOLICITAÇÃO ======= -->
+    <div id="section-nova-solicitacao" class="section">
+      <div class="section-header">
+        <h1 id="form-title">Nova Solicitação de Vaga</h1>
+        <p id="form-subtitle">Preencha as informações abaixo para solicitar uma vaga no Colégio Plenus</p>
+      </div>
+
+      <!-- Banner de modo edição -->
+      <div id="edit-mode-banner" style="display:none; align-items:center; justify-content:space-between; gap:1rem; background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:0.875rem; padding:0.875rem 1.25rem; margin-bottom:1.25rem; flex-wrap:wrap">
+        <span style="font-size:0.875rem; font-weight:600; color:#1e40af">✏️ Você está editando uma solicitação existente</span>
+        <button class="btn btn-danger btn-sm" onclick="cancelarEdicao()">✕ Cancelar edição</button>
+      </div>
+
+      <div id="form-alert"></div>
+
+      <!-- INFORMAÇÕES GERAIS -->
+      <div class="card" style="margin-bottom: 1.25rem">
+        <div class="card-title">📋 Informações Gerais</div>
+
+        <div class="form-grid" style="margin-bottom: 1rem">
+          <div class="form-group full-width">
+            <label for="motivo-transferencia">Motivo da transferência da escola anterior *</label>
+            <div class="chips-group" id="chips-motivo-transferencia">
+              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Localização / Proximidade">📍 Localização</button>
+              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Qualidade de Ensino">📚 Qualidade de Ensino</button>
+              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Proposta Pedagógica">🎓 Proposta Pedagógica</button>
+              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Infraestrutura">🏫 Infraestrutura</button>
+              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Clima Escolar">🤝 Clima Escolar</button>
+              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Custo-Benefício">💰 Custo-Benefício</button>
+              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Indicação de Amigos/Família">👨‍👩‍👧 Indicação</button>
+              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Mudança de Endereço">🏠 Mudança de Endereço</button>
+              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Metodologia de Ensino">🔬 Metodologia</button>
+            </div>
+            <textarea id="motivo-transferencia" placeholder="Informações adicionais (opcional)..."></textarea>
+          </div>
+          <div class="form-group full-width">
+            <label for="motivo-plenus">Por que escolheu o Colégio Plenus? *</label>
+            <div class="chips-group" id="chips-motivo-plenus">
+              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Qualidade Pedagógica">📚 Qualidade Pedagógica</button>
+              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Reputação da Escola">⭐ Reputação</button>
+              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Indicação de Conhecidos">👥 Indicação</button>
+              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Infraestrutura">🏫 Infraestrutura</button>
+              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Projeto Pedagógico">🎓 Projeto Pedagógico</button>
+              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Localização Favorável">📍 Localização</button>
+              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Valores e Cultura da Escola">🌟 Valores e Cultura</button>
+              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Atividades Extracurriculares">🎨 Extracurriculares</button>
+              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Clima Escolar">🤝 Clima Escolar</button>
+            </div>
+            <textarea id="motivo-plenus" placeholder="Informações adicionais (opcional)..."></textarea>
+          </div>
+        </div>
+
+        <div class="form-grid-3" style="margin-bottom: 1.25rem">
+          <div class="form-group">
+            <label for="valor-mensalidade">Valor da mensalidade atual</label>
+            <div class="input-currency">
+              <input type="text" id="valor-mensalidade" placeholder="0,00" inputmode="numeric" autocomplete="off" oninput="formatarMoeda(this)">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="taxa-desconto">Desconto almejado no Plenus (%)</label>
+            <input type="number" id="taxa-desconto" placeholder="Ex: 10" min="0" max="100" step="0.5">
+          </div>
+        </div>
+
+        <!-- Desconto atual -->
+        <div class="form-group" style="margin-bottom: 0.75rem">
+          <label>Possui algum desconto na escola atual?</label>
+          <div class="toggle-wrapper">
+            <label class="toggle">
+              <input type="checkbox" id="toggle-desconto" onchange="toggleDesconto()">
+              <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-label">Sim, possuo desconto</span>
+          </div>
+        </div>
+        <div id="desconto-detalhe" style="display: none; margin-bottom: 1.25rem">
+          <div class="form-group">
+            <label>Tipo de desconto</label>
+            <div class="chips-group" id="chips-desconto">
+              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Desconto de Irmãos">👫 Irmãos</button>
+              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Funcionalismo Público">🏛️ Funcionalismo Público</button>
+              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Convênio Empresarial">🏢 Convênio Empresarial</button>
+              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Bolsa de Estudo">🎓 Bolsa de Estudo</button>
+              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Pontualidade">⏰ Pontualidade</button>
+              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Parceria Educacional">🤝 Parceria</button>
+            </div>
+            <label for="descricao-desconto" style="margin-top: 0.5rem">Informações adicionais</label>
+            <textarea id="descricao-desconto" placeholder="Descreva detalhes adicionais sobre seus descontos (opcional)..."></textarea>
+          </div>
+        </div>
+
+        <!-- Permuta -->
+        <div class="form-group" style="margin-bottom: 0.75rem">
+          <label for="tipo-permuta">Possui serviço disponível para permuta com o colégio?</label>
+          <select id="tipo-permuta" onchange="togglePermuta()">
+            <option value="nao">Não</option>
+            <option value="parcial">Sim – Permuta parcial</option>
+            <option value="completa">Sim – Permuta completa</option>
+          </select>
+        </div>
+        <div id="permuta-detalhe" style="display: none">
+          <div class="form-group">
+            <label for="descricao-permuta">Descreva o serviço disponível para permuta</label>
+            <textarea id="descricao-permuta" placeholder="Ex: design gráfico, manutenção elétrica, odontologia, fotografia..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- ALUNOS -->
+      <div class="card">
+        <div class="card-title">
+          <span>🎒 Alunos</span>
+          <button class="btn btn-secondary btn-sm" onclick="adicionarAluno()">
+            + Adicionar Aluno
+          </button>
+        </div>
+
+        <div id="alunos-list" class="alunos-list"></div>
+
+        <div id="alunos-empty" class="empty-state">
+          <span class="empty-icon">🎒</span>
+          <p>Nenhum aluno adicionado ainda.<br>Adicione pelo menos um aluno para continuar.</p>
+          <button class="btn btn-secondary" onclick="adicionarAluno()">
+            + Adicionar Primeiro Aluno
+          </button>
+        </div>
+
+        <hr class="divider">
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem; flex-wrap: wrap">
+          <button class="btn btn-secondary" onclick="limparFormulario()">🗑️ Limpar tudo</button>
+          <button class="btn btn-primary" onclick="enviarSolicitacao()" id="btn-enviar">
+            📤 Enviar Solicitação
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======= SEÇÃO: MINHAS SOLICITAÇÕES ======= -->
+    <div id="section-minhas-solicitacoes" class="section">
+      <div class="section-header">
+        <h1>Minhas Solicitações</h1>
+        <p>Acompanhe o status das suas solicitações de vaga</p>
+      </div>
+
+      <div id="solicitacoes-list" class="solicitacoes-list">
+        <div class="empty-state">
+          <span class="empty-icon">⏳</span>
+          <p>Carregando solicitações...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======= SEÇÃO: PERFIL ======= -->
+    <div id="section-perfil" class="section">
+      <div class="section-header">
+        <h1>Meu Perfil</h1>
+        <p>Gerencie suas informações de contato</p>
+      </div>
+
+      <div class="card" style="max-width: 580px">
+        <div class="profile-header">
+          <div class="profile-info">
+            <h2 id="profile-nome-display">Seu nome</h2>
+            <p id="profile-email-display"></p>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <div id="perfil-alert"></div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="perfil-nome">Nome completo</label>
+            <input type="text" id="perfil-nome" placeholder="Seu nome completo">
+          </div>
+          <div class="form-group">
+            <label for="perfil-telefone">Telefone / WhatsApp</label>
+            <input type="tel" id="perfil-telefone" placeholder="(00) 00000-0000">
+          </div>
+        </div>
+
+        <div style="margin-top: 1.25rem">
+          <button class="btn btn-primary" onclick="salvarPerfil()" id="btn-salvar-perfil">
+            💾 Salvar Alterações
+          </button>
+        </div>
+      </div>
+
+      <!-- Card: Alterar E-mail -->
+      <div class="card" style="max-width: 580px; margin-top: 1rem">
+        <div class="card-title">📧 Alterar E-mail</div>
+        <div id="email-alert"></div>
+        <div class="form-group" style="margin-bottom:0.75rem">
+          <label for="novo-email">Novo endereço de e-mail</label>
+          <input type="email" id="novo-email" placeholder="novo@email.com">
+        </div>
+        <p style="font-size:0.8rem; color:var(--gray-dark); margin-bottom:1rem; line-height:1.5">
+          Um link de confirmação será enviado ao novo e-mail. A alteração só é efetivada após clicar no link.
+        </p>
+        <button class="btn btn-secondary" onclick="alterarEmail()" id="btn-alterar-email">
+          📧 Enviar link de confirmação
+        </button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+</body>
+</html>

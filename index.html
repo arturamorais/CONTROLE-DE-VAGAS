@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login – Colégio Plenus</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/auth.js" defer></script>
+  <link rel="stylesheet" href="css/estilo.css">
+</head>
+<body>
+
+<div class="auth-layout">
+
+  <!-- PAINEL ESQUERDO -->
+  <div class="brand-panel">
+    <div class="brand-deco">
+      <div class="deco-circle c1"></div>
+      <div class="deco-circle c2"></div>
+      <div class="deco-circle c3"></div>
+    </div>
+    <div class="brand-body">
+      <div class="brand-logo">🏫</div>
+      <h1 class="brand-name">Colégio Plenus</h1>
+      <p class="brand-tagline">Excelência em educação,<br>formando cidadãos para o futuro.</p>
+      <ul class="brand-features">
+        <li>
+          <span class="feat-icon">✦</span>
+          Portal exclusivo para responsáveis
+        </li>
+        <li>
+          <span class="feat-icon">✦</span>
+          Solicite vagas de forma simples e rápida
+        </li>
+        <li>
+          <span class="feat-icon">✦</span>
+          Acompanhe suas solicitações em tempo real
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- PAINEL DIREITO -->
+  <div class="form-panel">
+    <div class="form-box">
+
+      <div class="form-header">
+        <span class="form-logo-sm">🏫</span>
+        <h2>Bem-vindo de volta</h2>
+        <p>Acesse sua conta para continuar</p>
+      </div>
+
+      <div class="field">
+        <label for="email">E-mail</label>
+        <div class="input-wrap">
+          <span class="input-icon">✉</span>
+          <input type="email" id="email" placeholder="seu@email.com">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="senha">Senha</label>
+        <div class="input-wrap">
+          <span class="input-icon">🔒</span>
+          <input type="password" id="senha" placeholder="••••••••">
+        </div>
+      </div>
+
+      <button class="btn-submit" onclick="login()">Entrar na conta</button>
+
+      <p class="form-footer">
+        Não tem conta? <a href="cadastro.html">Criar conta grátis</a>
+      </p>
+
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
