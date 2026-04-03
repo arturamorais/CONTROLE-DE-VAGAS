@@ -3,363 +3,653 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#0f172a">
-  <title>Portal – Colégio Plenus</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <script src="js/supabase.js"></script>
-  <script src="js/dashboard.js" defer></script>
-  <link rel="stylesheet" href="css/dashboard.css">
+  <title>Apresentação do Sistema – Colégio Plenus</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+      overflow-x: hidden;
+    }
+
+    /* ── VARIÁVEIS ── */
+    :root {
+      --navy:    #0a0f1e;
+      --navy-m:  #0f172a;
+      --blue:    #3b82f6;
+      --blue-d:  #1e40af;
+      --orange:  #f97316;
+      --green:   #22c55e;
+      --red:     #ef4444;
+      --yellow:  #f59e0b;
+      --white:   #ffffff;
+      --smoke:   #f8fafc;
+      --gray-l:  #e2e8f0;
+      --gray:    #94a3b8;
+      --gray-d:  #475569;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(10,15,30,0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem; height: 64px;
+    }
+    .nav-brand { display: flex; align-items: center; gap: 0.625rem; text-decoration: none; }
+    .nav-brand-icon { font-size: 1.5rem; }
+    .nav-brand-name { font-size: 1rem; font-weight: 700; color: #fff; }
+    .nav-brand-tag  { font-size: 0.65rem; font-weight: 700; color: var(--orange); text-transform: uppercase; letter-spacing: 0.1em; }
+    .nav-links { display: flex; gap: 0.25rem; }
+    .nav-links a {
+      font-size: 0.82rem; color: rgba(255,255,255,0.7); text-decoration: none;
+      padding: 0.4rem 0.875rem; border-radius: 0.5rem; transition: all 0.2s;
+    }
+    .nav-links a:hover { color: #fff; background: rgba(255,255,255,0.08); }
+    .nav-cta {
+      background: var(--blue); color: #fff; border: none; border-radius: 0.625rem;
+      padding: 0.5rem 1.125rem; font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; text-decoration: none; transition: all 0.2s;
+    }
+    .nav-cta:hover { background: var(--blue-d); }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      background: linear-gradient(135deg, var(--navy) 0%, #0d1b3e 60%, #1a0a2e 100%);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 8rem 2rem 5rem; position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 50%, rgba(59,130,246,0.12) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 50% at 80% 40%, rgba(249,115,22,0.10) 0%, transparent 70%);
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3);
+      color: #93c5fd; border-radius: 9999px;
+      padding: 0.35rem 1rem; font-size: 0.78rem; font-weight: 600;
+      margin-bottom: 1.75rem; letter-spacing: 0.04em; position: relative;
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 900; color: #fff; line-height: 1.12;
+      max-width: 800px; margin-bottom: 1.25rem; position: relative;
+    }
+    .hero h1 span { color: var(--orange); }
+    .hero p {
+      font-size: clamp(1rem, 2vw, 1.2rem); color: rgba(255,255,255,0.65);
+      max-width: 580px; line-height: 1.7; margin-bottom: 2.5rem; position: relative;
+    }
+    .hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; position: relative; }
+    .btn-hero-primary {
+      background: var(--blue); color: #fff; border: none;
+      padding: 0.875rem 2rem; border-radius: 0.75rem;
+      font-size: 0.95rem; font-weight: 700; cursor: pointer;
+      text-decoration: none; transition: all 0.2s;
+      box-shadow: 0 4px 20px rgba(59,130,246,0.4);
+    }
+    .btn-hero-primary:hover { background: var(--blue-d); transform: translateY(-1px); }
+    .btn-hero-secondary {
+      background: rgba(255,255,255,0.08); color: #fff;
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 0.875rem 2rem; border-radius: 0.75rem;
+      font-size: 0.95rem; font-weight: 600; cursor: pointer;
+      text-decoration: none; transition: all 0.2s;
+    }
+    .btn-hero-secondary:hover { background: rgba(255,255,255,0.14); }
+
+    .hero-stats {
+      display: flex; gap: 2.5rem; margin-top: 4rem;
+      position: relative; flex-wrap: wrap; justify-content: center;
+    }
+    .hero-stat { text-align: center; }
+    .hero-stat-val { font-size: 2rem; font-weight: 900; color: #fff; line-height: 1; }
+    .hero-stat-val span { color: var(--orange); }
+    .hero-stat-label { font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 0.3rem; }
+
+    /* ── SEÇÕES ── */
+    section { padding: 5rem 2rem; }
+    .container { max-width: 1100px; margin: 0 auto; }
+    .section-eyebrow {
+      display: inline-block; font-size: 0.75rem; font-weight: 700;
+      color: var(--blue); text-transform: uppercase; letter-spacing: 0.1em;
+      margin-bottom: 0.75rem;
+    }
+    .section-title { font-size: clamp(1.6rem, 3vw, 2.25rem); font-weight: 800; color: var(--navy-m); margin-bottom: 0.875rem; }
+    .section-sub { font-size: 1rem; color: var(--gray-d); line-height: 1.7; max-width: 580px; }
+    .section-header { margin-bottom: 3rem; }
+
+    /* ── PÚBLICO ── */
+    .publico-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;
+    }
+    .publico-card {
+      background: var(--white); border-radius: 1.25rem;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      padding: 2rem; border-top: 4px solid var(--blue-d);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .publico-card.orange { border-top-color: var(--orange); }
+    .publico-card:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(0,0,0,0.1); }
+    .publico-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+    .publico-title { font-size: 1.2rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .publico-desc  { font-size: 0.875rem; color: var(--gray-d); line-height: 1.65; margin-bottom: 1.25rem; }
+    .publico-lista { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+    .publico-lista li { display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.84rem; color: var(--gray-d); }
+    .publico-lista li::before { content: '✓'; color: var(--green); font-weight: 700; flex-shrink: 0; margin-top: 0.05rem; }
+
+    /* ── FLUXO ── */
+    #fluxo { background: var(--navy-m); }
+    #fluxo .section-eyebrow { color: #93c5fd; }
+    #fluxo .section-title { color: #fff; }
+    #fluxo .section-sub { color: rgba(255,255,255,0.6); }
+
+    .fluxo-steps {
+      display: flex; align-items: flex-start; gap: 0; flex-wrap: wrap;
+      position: relative;
+    }
+    .fluxo-step {
+      flex: 1; min-width: 160px; text-align: center;
+      padding: 1.5rem 1rem; position: relative;
+    }
+    .fluxo-step:not(:last-child)::after {
+      content: '→';
+      position: absolute; right: -0.75rem; top: 50%; transform: translateY(-60%);
+      font-size: 1.5rem; color: rgba(255,255,255,0.2);
+    }
+    .fluxo-num {
+      width: 48px; height: 48px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; margin: 0 auto 1rem;
+    }
+    .fluxo-num.pendente   { background: rgba(245,158,11,0.15); }
+    .fluxo-num.analise    { background: rgba(59,130,246,0.15); }
+    .fluxo-num.aprovado   { background: rgba(34,197,94,0.15); }
+    .fluxo-num.reprovado  { background: rgba(239,68,68,0.15); }
+    .fluxo-num.enturmar   { background: rgba(249,115,22,0.15); }
+    .fluxo-badge {
+      display: inline-block; padding: 0.2rem 0.75rem; border-radius: 9999px;
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; margin-bottom: 0.5rem;
+    }
+    .fluxo-badge.pendente  { background: rgba(245,158,11,0.15); color: #fbbf24; }
+    .fluxo-badge.analise   { background: rgba(59,130,246,0.15);  color: #60a5fa; }
+    .fluxo-badge.aprovado  { background: rgba(34,197,94,0.15);   color: #4ade80; }
+    .fluxo-badge.reprovado { background: rgba(239,68,68,0.15);   color: #f87171; }
+    .fluxo-badge.enturmar  { background: rgba(249,115,22,0.15);  color: #fb923c; }
+    .fluxo-label { font-size: 0.8rem; color: rgba(255,255,255,0.5); line-height: 1.5; }
+
+    /* ── FUNCIONALIDADES ── */
+    .feat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+    }
+    .feat-card {
+      background: var(--white); border-radius: 1rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      padding: 1.5rem; transition: transform 0.2s, box-shadow 0.2s;
+      border: 1px solid var(--gray-l);
+    }
+    .feat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,0,0,0.09); }
+    .feat-icon-wrap {
+      width: 44px; height: 44px; border-radius: 0.625rem;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; margin-bottom: 0.875rem;
+    }
+    .feat-icon-wrap.blue   { background: #eff6ff; }
+    .feat-icon-wrap.orange { background: #fff7ed; }
+    .feat-icon-wrap.green  { background: #f0fdf4; }
+    .feat-icon-wrap.purple { background: #faf5ff; }
+    .feat-icon-wrap.red    { background: #fff1f2; }
+    .feat-icon-wrap.yellow { background: #fffbeb; }
+    .feat-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.4rem; color: var(--navy-m); }
+    .feat-desc  { font-size: 0.82rem; color: var(--gray-d); line-height: 1.6; }
+
+    /* ── RELATÓRIOS ── */
+    #relatorios { background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%); }
+    .rel-preview-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem;
+    }
+    .rel-kpi {
+      background: var(--white); border-radius: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      padding: 1.25rem; text-align: center;
+      border-top: 3px solid var(--gray-l);
+    }
+    .rel-kpi.blue   { border-top-color: var(--blue); }
+    .rel-kpi.green  { border-top-color: var(--green); }
+    .rel-kpi.orange { border-top-color: var(--orange); }
+    .rel-kpi.yellow { border-top-color: var(--yellow); }
+    .rel-kpi-ico  { font-size: 1.5rem; margin-bottom: 0.35rem; }
+    .rel-kpi-lbl  { font-size: 0.72rem; color: var(--gray-d); font-weight: 500; }
+
+    .rel-chart-list {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;
+    }
+    .rel-chart-item {
+      background: var(--white); border-radius: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      padding: 1.25rem; display: flex; align-items: flex-start; gap: 1rem;
+    }
+    .rel-chart-icon { font-size: 1.75rem; flex-shrink: 0; }
+    .rel-chart-name { font-size: 0.9rem; font-weight: 700; margin-bottom: 0.3rem; }
+    .rel-chart-desc { font-size: 0.8rem; color: var(--gray-d); line-height: 1.55; }
+
+    /* ── TECH ── */
+    #tecnologia { background: var(--white); }
+    .tech-grid { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+    .tech-pill {
+      display: flex; align-items: center; gap: 0.5rem;
+      background: var(--smoke); border: 1px solid var(--gray-l);
+      border-radius: 9999px; padding: 0.5rem 1.25rem;
+      font-size: 0.84rem; font-weight: 600; color: var(--navy-m);
+    }
+
+    /* ── CTA FINAL ── */
+    .cta-section {
+      background: linear-gradient(135deg, var(--navy) 0%, #0d1b3e 100%);
+      text-align: center; padding: 5rem 2rem; position: relative; overflow: hidden;
+    }
+    .cta-section::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 80% 80% at 50% 50%, rgba(59,130,246,0.15) 0%, transparent 70%);
+    }
+    .cta-section h2 { font-size: clamp(1.6rem, 3vw, 2.5rem); font-weight: 900; color: #fff; margin-bottom: 1rem; position: relative; }
+    .cta-section h2 span { color: var(--orange); }
+    .cta-section p { font-size: 1rem; color: rgba(255,255,255,0.6); margin-bottom: 2rem; position: relative; }
+    .cta-btn {
+      background: var(--orange); color: #fff; border: none;
+      padding: 1rem 2.5rem; border-radius: 0.75rem;
+      font-size: 1rem; font-weight: 700; cursor: pointer;
+      text-decoration: none; display: inline-block;
+      box-shadow: 0 4px 20px rgba(249,115,22,0.4);
+      transition: all 0.2s; position: relative;
+    }
+    .cta-btn:hover { background: #ea580c; transform: translateY(-2px); }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--navy);
+      text-align: center; padding: 1.5rem;
+      font-size: 0.78rem; color: rgba(255,255,255,0.3);
+    }
+
+    /* ── RESPONSIVO ── */
+    @media (max-width: 900px) {
+      .publico-grid  { grid-template-columns: 1fr; }
+      .feat-grid     { grid-template-columns: 1fr 1fr; }
+      .rel-preview-grid { grid-template-columns: 1fr 1fr; }
+      .rel-chart-list   { grid-template-columns: 1fr; }
+      .fluxo-step:not(:last-child)::after { display: none; }
+    }
+    @media (max-width: 600px) {
+      .feat-grid     { grid-template-columns: 1fr; }
+      .nav-links     { display: none; }
+      .hero-stats    { gap: 1.5rem; }
+    }
+  </style>
 </head>
 <body>
 
-<!-- OVERLAY mobile -->
-<div id="overlay" class="overlay" onclick="closeSidebar()"></div>
+<!-- ═══════════ NAV ═══════════ -->
+<nav>
+  <a href="#" class="nav-brand">
+    <span class="nav-brand-icon">🏫</span>
+    <div>
+      <div class="nav-brand-name">Colégio Plenus</div>
+      <div class="nav-brand-tag">Sistema de Vagas</div>
+    </div>
+  </a>
+  <div class="nav-links">
+    <a href="#publico">Para quem é</a>
+    <a href="#fluxo">Fluxo</a>
+    <a href="#funcionalidades">Funcionalidades</a>
+    <a href="#relatorios">Relatórios</a>
+    <a href="#tecnologia">Tecnologia</a>
+  </div>
+  <a href="index.html" class="nav-cta">Acessar Sistema</a>
+</nav>
 
-<div id="app">
+<!-- ═══════════ HERO ═══════════ -->
+<section class="hero">
+  <div class="hero-badge">✦ Colégio Plenus · Portal de Vagas</div>
+  <h1>O processo de <span>admissão</span><br>que a sua escola merecia</h1>
+  <p>Do primeiro contato do responsável até a enturmação do aluno — tudo centralizado, rastreado e sob controle da sua equipe.</p>
+  <div class="hero-actions">
+    <a href="index.html" class="btn-hero-primary">Acessar o Sistema</a>
+    <a href="#funcionalidades" class="btn-hero-secondary">Ver Funcionalidades</a>
+  </div>
+  <div class="hero-stats">
+    <div class="hero-stat">
+      <div class="hero-stat-val">4<span>+</span></div>
+      <div class="hero-stat-label">Módulos Integrados</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val">100<span>%</span></div>
+      <div class="hero-stat-label">Online e em tempo real</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val">0</div>
+      <div class="hero-stat-label">Planilhas necessárias</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val">∞</div>
+      <div class="hero-stat-label">Histórico preservado</div>
+    </div>
+  </div>
+</section>
 
-  <!-- =================== SIDEBAR =================== -->
-  <aside id="sidebar" class="sidebar">
+<!-- ═══════════ PARA QUEM É ═══════════ -->
+<section id="publico">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-eyebrow">Para quem é</span>
+      <h2 class="section-title">Dois perfis. Uma plataforma.</h2>
+      <p class="section-sub">O sistema atende tanto as famílias que buscam uma vaga quanto a equipe administrativa que gerencia todo o processo.</p>
+    </div>
+    <div class="publico-grid">
 
-    <div class="sidebar-logo">
-      <span class="logo-icon">🏫</span>
+      <div class="publico-card">
+        <div class="publico-icon">👨‍👩‍👧</div>
+        <div class="publico-title">Responsável / Família</div>
+        <div class="publico-desc">
+          Pais e responsáveis que desejam solicitar uma vaga para seu filho no Colégio Plenus. O processo é simples, transparente e acompanhado em tempo real.
+        </div>
+        <ul class="publico-lista">
+          <li>Solicita vagas pelo portal sem sair de casa</li>
+          <li>Informa dados do aluno, segmento e turno desejado</li>
+          <li>Descreve motivos da transferência e escolha do Plenus</li>
+          <li>Acompanha o status em tempo real (pendente → aprovado)</li>
+          <li>Recebe o histórico completo de todas as atualizações</li>
+          <li>Visualiza notas e mensagens da equipe Plenus</li>
+        </ul>
+      </div>
+
+      <div class="publico-card orange">
+        <div class="publico-icon">🏫</div>
+        <div class="publico-title">Equipe Administrativa (Gestores)</div>
+        <div class="publico-desc">
+          Colaboradores e administradores do colégio que conduzem todo o processo de análise, aprovação e enturmação dos candidatos.
+        </div>
+        <ul class="publico-lista">
+          <li>Acessa o painel de gestão com todas as solicitações</li>
+          <li>Avança o status com nota obrigatória para o histórico</li>
+          <li>Aprova ou reprova alunos individualmente</li>
+          <li>Registra observações em qualquer momento</li>
+          <li>Cria turmas e aloca alunos aprovados</li>
+          <li>Consulta relatórios analíticos e gráficos estratégicos</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ FLUXO ═══════════ -->
+<section id="fluxo">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-eyebrow">Como funciona</span>
+      <h2 class="section-title">Do interesse à enturmação</h2>
+      <p class="section-sub">Cada solicitação percorre um fluxo claro, com rastreabilidade completa em todas as etapas.</p>
+    </div>
+
+    <div class="fluxo-steps">
+      <div class="fluxo-step">
+        <div class="fluxo-num pendente">📝</div>
+        <div class="fluxo-badge pendente">Pendente</div>
+        <div class="fluxo-label">Responsável envia<br>a solicitação de vaga</div>
+      </div>
+      <div class="fluxo-step">
+        <div class="fluxo-num analise">🔍</div>
+        <div class="fluxo-badge analise">Em Análise</div>
+        <div class="fluxo-label">Gestor inicia<br>a avaliação do perfil</div>
+      </div>
+      <div class="fluxo-step">
+        <div class="fluxo-num aprovado">✅</div>
+        <div class="fluxo-badge aprovado">Aprovado</div>
+        <div class="fluxo-label">Alunos avaliados<br>individualmente</div>
+      </div>
+      <div class="fluxo-step">
+        <div class="fluxo-num enturmar">🏫</div>
+        <div class="fluxo-badge enturmar">Enturmar</div>
+        <div class="fluxo-label">Aluno alocado<br>na turma correta</div>
+      </div>
+      <div class="fluxo-step">
+        <div class="fluxo-num" style="background:rgba(139,92,246,0.15)">🎓</div>
+        <div class="fluxo-badge" style="background:rgba(139,92,246,0.15);color:#c4b5fd">Matriculado</div>
+        <div class="fluxo-label">Matrícula efetivada<br>e processo concluído</div>
+      </div>
+    </div>
+
+    <div style="margin-top:2.5rem;padding:1.5rem;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:1rem;display:flex;align-items:flex-start;gap:1rem">
+      <span style="font-size:1.5rem;flex-shrink:0">💡</span>
       <div>
-        <div class="logo-text">Colégio Plenus</div>
-        <div class="logo-subtitle">Portal do Responsável</div>
+        <div style="font-weight:700;color:#fff;margin-bottom:0.35rem">Aprovação individual por aluno</div>
+        <div style="font-size:0.84rem;color:rgba(255,255,255,0.55);line-height:1.65">
+          Quando uma solicitação possui múltiplos alunos, cada um pode ser aprovado ou reprovado individualmente — com motivo obrigatório para reprovações. A solicitação só é marcada como totalmente aprovada quando todos os alunos forem aprovados, caso contrário é exibida como <strong style="color:#fbbf24">Aprovado com ressalvas</strong>.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ FUNCIONALIDADES ═══════════ -->
+<section id="funcionalidades">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-eyebrow">Funcionalidades</span>
+      <h2 class="section-title">Tudo que o processo precisa</h2>
+      <p class="section-sub">Cada detalhe foi pensado para eliminar planilhas, e-mails avulsos e retrabalho na admissão de alunos.</p>
+    </div>
+
+    <div class="feat-grid">
+
+      <div class="feat-card">
+        <div class="feat-icon-wrap blue">📋</div>
+        <div class="feat-title">Portal de Solicitação</div>
+        <div class="feat-desc">
+          Formulário intuitivo com seleção de motivos por chips pré-definidos, campo de valor de mensalidade em formato moeda e suporte a múltiplos alunos por solicitação.
+        </div>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon-wrap orange">⚙️</div>
+        <div class="feat-title">Gestão de Solicitações</div>
+        <div class="feat-desc">
+          Painel centralizado com filtros por status e busca por nome. Cada solicitação exibe um detalhe completo com dados do responsável, alunos, situação financeira e histórico.
+        </div>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon-wrap green">✅</div>
+        <div class="feat-title">Aprovação Individual</div>
+        <div class="feat-desc">
+          Cada aluno de uma solicitação pode ser aprovado ou reprovado separadamente. Reprovações exigem descrição do motivo. O sistema avisa quando há ressalvas na aprovação.
+        </div>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon-wrap yellow">📝</div>
+        <div class="feat-title">Histórico Completo</div>
+        <div class="feat-desc">
+          Toda alteração de status gera um registro automático no histórico, com data, hora, autor e nota. Visível tanto para o responsável quanto para os colaboradores.
+        </div>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon-wrap purple">🏫</div>
+        <div class="feat-title">Enturmar Alunos</div>
+        <div class="feat-desc">
+          Crie turmas por segmento, série, turno e capacidade. Aloque alunos aprovados diretamente nas turmas. Veja vagas disponíveis e remova alocações quando necessário.
+        </div>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon-wrap blue">📈</div>
+        <div class="feat-title">Relatórios Analíticos</div>
+        <div class="feat-desc">
+          Gráficos interativos com taxa de aprovação, segmentos mais solicitados, turnos preferidos, séries mais demandadas e os motivos de saída e escolha do Plenus.
+        </div>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon-wrap orange">📊</div>
+        <div class="feat-title">Registro de Atividade</div>
+        <div class="feat-desc">
+          Timeline completa de todas as ações realizadas no sistema, agrupadas por dia. Filtros por período e ação. Inclui o conteúdo da nota em cada registro.
+        </div>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon-wrap red">📋</div>
+        <div class="feat-title">Guias de Orientação</div>
+        <div class="feat-desc">
+          Modais de guia disponíveis em cada etapa do processo, orientando o gestor sobre como avaliar, negociar e conduzir a efetivação da matrícula corretamente.
+        </div>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon-wrap green">🔒</div>
+        <div class="feat-title">Segurança com RLS</div>
+        <div class="feat-desc">
+          Row Level Security no Supabase garante que cada usuário enxerga apenas os dados que lhe pertencem. Colaboradores têm acesso ampliado controlado por política.
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ RELATÓRIOS ═══════════ -->
+<section id="relatorios">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-eyebrow">Inteligência de dados</span>
+      <h2 class="section-title">Relatórios que guiam decisões</h2>
+      <p class="section-sub">A tela de relatórios transforma os dados brutos das solicitações em insights estratégicos para a gestão do colégio.</p>
+    </div>
+
+    <div class="rel-preview-grid">
+      <div class="rel-kpi blue">
+        <div class="rel-kpi-ico">📋</div>
+        <div class="rel-kpi-lbl">Total de Solicitações</div>
+      </div>
+      <div class="rel-kpi green">
+        <div class="rel-kpi-ico">✅</div>
+        <div class="rel-kpi-lbl">Taxa de Aprovação</div>
+      </div>
+      <div class="rel-kpi orange">
+        <div class="rel-kpi-ico">🎒</div>
+        <div class="rel-kpi-lbl">Total de Alunos</div>
+      </div>
+      <div class="rel-kpi yellow">
+        <div class="rel-kpi-ico">💰</div>
+        <div class="rel-kpi-lbl">Ticket Médio Mensalidade</div>
       </div>
     </div>
 
-    <nav class="sidebar-nav">
-      <button class="nav-item active" onclick="showSection('overview')" data-section="overview">
-        <span class="nav-icon">🏠</span>
-        <span class="nav-text">Início</span>
-      </button>
-      <button class="nav-item" onclick="showSection('nova-solicitacao')" data-section="nova-solicitacao">
-        <span class="nav-icon">📝</span>
-        <span class="nav-text">Nova Solicitação</span>
-      </button>
-      <button class="nav-item" onclick="showSection('minhas-solicitacoes')" data-section="minhas-solicitacoes">
-        <span class="nav-icon">📋</span>
-        <span class="nav-text">Minhas Solicitações</span>
-      </button>
-      <button class="nav-item" onclick="showSection('perfil')" data-section="perfil">
-        <span class="nav-icon">👤</span>
-        <span class="nav-text">Meu Perfil</span>
-      </button>
-    </nav>
-
-    <div id="btn-admin-wrap" style="padding: 0 0.75rem 0.75rem; display: none">
-      <a href="admin.html" class="btn-trocar-painel btn-trocar-admin">
-        <span>⚙</span>
-        <span>Painel de Gestão</span>
-      </a>
-    </div>
-
-    <div class="sidebar-footer">
-      <div class="user-info">
+    <div class="rel-chart-list">
+      <div class="rel-chart-item">
+        <div class="rel-chart-icon">🍩</div>
         <div>
-          <div class="user-name" id="sidebar-nome"></div>
-          <div class="user-email" id="sidebar-email"></div>
+          <div class="rel-chart-name">Solicitações por Status</div>
+          <div class="rel-chart-desc">Distribuição entre Pendente, Em Análise, Aprovado e Reprovado com percentual de cada etapa.</div>
         </div>
       </div>
-      <button class="btn-logout" onclick="logout()">
-        🚪 Sair da conta
-      </button>
-    </div>
-
-  </aside>
-
-  <!-- =================== MAIN =================== -->
-  <main id="main-content">
-
-    <!-- TOPBAR mobile -->
-    <header class="topbar">
-      <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Menu">
-        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" d="M3 12h18M3 6h18M3 18h18"/>
-        </svg>
-      </button>
-      <span class="topbar-title">Colégio Plenus</span>
-      <div></div>
-    </header>
-
-    <!-- ======= SEÇÃO: INÍCIO ======= -->
-    <div id="section-overview" class="section active">
-      <div class="section-header">
-        <h1><span id="welcome-msg">Bem-vindo!</span></h1>
-        <p>Gerencie suas solicitações de vagas no Colégio Plenus</p>
-      </div>
-
-      <div class="welcome-banner">
-        <h2>Portal do Responsável 🏫</h2>
-        <p>Solicite vagas, acompanhe o status e gerencie tudo em um só lugar.</p>
-        <button class="btn btn-primary" onclick="showSection('nova-solicitacao')" style="position:relative;z-index:1">
-          📝 Nova Solicitação de Vaga
-        </button>
-      </div>
-
-      <div class="stats-grid">
-        <div class="stat-card blue">
-          <div class="stat-icon-wrap">📋</div>
-          <div class="stat-value" id="stat-solicitacoes">–</div>
-          <div class="stat-label">Solicitações</div>
-        </div>
-        <div class="stat-card orange">
-          <div class="stat-icon-wrap">🎒</div>
-          <div class="stat-value" id="stat-alunos">–</div>
-          <div class="stat-label">Alunos</div>
-        </div>
-        <div class="stat-card green">
-          <div class="stat-icon-wrap">✅</div>
-          <div class="stat-value" id="stat-aprovados">–</div>
-          <div class="stat-label">Aprovadas</div>
+      <div class="rel-chart-item">
+        <div class="rel-chart-icon">📊</div>
+        <div>
+          <div class="rel-chart-name">Solicitações por Segmento</div>
+          <div class="rel-chart-desc">Ed. Infantil, Fund. 1, Fund. 2 e Ensino Médio — identifica quais níveis têm maior demanda.</div>
         </div>
       </div>
-
-      <div class="card">
-        <div class="card-title">📌 Como funciona</div>
-        <div class="steps">
-          <div class="step">
-            <div class="step-num">1</div>
-            <div>
-              <strong>Complete seu perfil</strong>
-              <p>Adicione seu nome e telefone para que possamos entrar em contato</p>
-            </div>
-          </div>
-          <div class="step">
-            <div class="step-num">2</div>
-            <div>
-              <strong>Faça uma solicitação de vaga</strong>
-              <p>Informe os dados dos alunos, segmentos desejados e informações sobre mensalidade</p>
-            </div>
-          </div>
-          <div class="step">
-            <div class="step-num">3</div>
-            <div>
-              <strong>Aguarde o retorno</strong>
-              <p>Nossa equipe analisará sua solicitação e entrará em contato em breve</p>
-            </div>
-          </div>
-        </div>
-        <hr class="divider">
-        <button class="btn btn-primary" onclick="showSection('nova-solicitacao')">
-          📝 Nova Solicitação de Vaga
-        </button>
-      </div>
-    </div>
-
-    <!-- ======= SEÇÃO: NOVA SOLICITAÇÃO ======= -->
-    <div id="section-nova-solicitacao" class="section">
-      <div class="section-header">
-        <h1 id="form-title">Nova Solicitação de Vaga</h1>
-        <p id="form-subtitle">Preencha as informações abaixo para solicitar uma vaga no Colégio Plenus</p>
-      </div>
-
-      <!-- Banner de modo edição -->
-      <div id="edit-mode-banner" style="display:none; align-items:center; justify-content:space-between; gap:1rem; background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:0.875rem; padding:0.875rem 1.25rem; margin-bottom:1.25rem; flex-wrap:wrap">
-        <span style="font-size:0.875rem; font-weight:600; color:#1e40af">✏️ Você está editando uma solicitação existente</span>
-        <button class="btn btn-danger btn-sm" onclick="cancelarEdicao()">✕ Cancelar edição</button>
-      </div>
-
-      <div id="form-alert"></div>
-
-      <!-- INFORMAÇÕES GERAIS -->
-      <div class="card" style="margin-bottom: 1.25rem">
-        <div class="card-title">📋 Informações Gerais</div>
-
-        <div class="form-grid" style="margin-bottom: 1rem">
-          <div class="form-group full-width">
-            <label for="motivo-transferencia">Motivo da transferência da escola anterior *</label>
-            <div class="chips-group" id="chips-motivo-transferencia">
-              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Localização / Proximidade">📍 Localização</button>
-              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Qualidade de Ensino">📚 Qualidade de Ensino</button>
-              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Proposta Pedagógica">🎓 Proposta Pedagógica</button>
-              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Infraestrutura">🏫 Infraestrutura</button>
-              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Clima Escolar">🤝 Clima Escolar</button>
-              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Custo-Benefício">💰 Custo-Benefício</button>
-              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Indicação de Amigos/Família">👨‍👩‍👧 Indicação</button>
-              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Mudança de Endereço">🏠 Mudança de Endereço</button>
-              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Metodologia de Ensino">🔬 Metodologia</button>
-            </div>
-            <textarea id="motivo-transferencia" placeholder="Informações adicionais (opcional)..."></textarea>
-          </div>
-          <div class="form-group full-width">
-            <label for="motivo-plenus">Por que escolheu o Colégio Plenus? *</label>
-            <div class="chips-group" id="chips-motivo-plenus">
-              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Qualidade Pedagógica">📚 Qualidade Pedagógica</button>
-              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Reputação da Escola">⭐ Reputação</button>
-              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Indicação de Conhecidos">👥 Indicação</button>
-              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Infraestrutura">🏫 Infraestrutura</button>
-              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Projeto Pedagógico">🎓 Projeto Pedagógico</button>
-              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Localização Favorável">📍 Localização</button>
-              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Valores e Cultura da Escola">🌟 Valores e Cultura</button>
-              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Atividades Extracurriculares">🎨 Extracurriculares</button>
-              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Clima Escolar">🤝 Clima Escolar</button>
-            </div>
-            <textarea id="motivo-plenus" placeholder="Informações adicionais (opcional)..."></textarea>
-          </div>
-        </div>
-
-        <div class="form-grid-3" style="margin-bottom: 1.25rem">
-          <div class="form-group">
-            <label for="valor-mensalidade">Valor da mensalidade atual</label>
-            <div class="input-currency">
-              <input type="text" id="valor-mensalidade" placeholder="0,00" inputmode="numeric" autocomplete="off" oninput="formatarMoeda(this)">
-            </div>
-          </div>
-          <div class="form-group">
-            <label for="taxa-desconto">Desconto almejado no Plenus (%)</label>
-            <input type="number" id="taxa-desconto" placeholder="Ex: 10" min="0" max="100" step="0.5">
-          </div>
-        </div>
-
-        <!-- Desconto atual -->
-        <div class="form-group" style="margin-bottom: 0.75rem">
-          <label>Possui algum desconto na escola atual?</label>
-          <div class="toggle-wrapper">
-            <label class="toggle">
-              <input type="checkbox" id="toggle-desconto" onchange="toggleDesconto()">
-              <span class="toggle-slider"></span>
-            </label>
-            <span class="toggle-label">Sim, possuo desconto</span>
-          </div>
-        </div>
-        <div id="desconto-detalhe" style="display: none; margin-bottom: 1.25rem">
-          <div class="form-group">
-            <label>Tipo de desconto</label>
-            <div class="chips-group" id="chips-desconto">
-              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Desconto de Irmãos">👫 Irmãos</button>
-              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Funcionalismo Público">🏛️ Funcionalismo Público</button>
-              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Convênio Empresarial">🏢 Convênio Empresarial</button>
-              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Bolsa de Estudo">🎓 Bolsa de Estudo</button>
-              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Pontualidade">⏰ Pontualidade</button>
-              <button type="button" class="chip" onclick="toggleChip(this)" data-value="Parceria Educacional">🤝 Parceria</button>
-            </div>
-            <label for="descricao-desconto" style="margin-top: 0.5rem">Informações adicionais</label>
-            <textarea id="descricao-desconto" placeholder="Descreva detalhes adicionais sobre seus descontos (opcional)..."></textarea>
-          </div>
-        </div>
-
-        <!-- Permuta -->
-        <div class="form-group" style="margin-bottom: 0.75rem">
-          <label for="tipo-permuta">Possui serviço disponível para permuta com o colégio?</label>
-          <select id="tipo-permuta" onchange="togglePermuta()">
-            <option value="nao">Não</option>
-            <option value="parcial">Sim – Permuta parcial</option>
-            <option value="completa">Sim – Permuta completa</option>
-          </select>
-        </div>
-        <div id="permuta-detalhe" style="display: none">
-          <div class="form-group">
-            <label for="descricao-permuta">Descreva o serviço disponível para permuta</label>
-            <textarea id="descricao-permuta" placeholder="Ex: design gráfico, manutenção elétrica, odontologia, fotografia..."></textarea>
-          </div>
+      <div class="rel-chart-item">
+        <div class="rel-chart-icon">📚</div>
+        <div>
+          <div class="rel-chart-name">Séries Mais Solicitadas</div>
+          <div class="rel-chart-desc">Ranking das séries com maior número de candidatos: 1º Ano, 3ª Série, Maternal e etc.</div>
         </div>
       </div>
-
-      <!-- ALUNOS -->
-      <div class="card">
-        <div class="card-title">
-          <span>🎒 Alunos</span>
-          <button class="btn btn-secondary btn-sm" onclick="adicionarAluno()">
-            + Adicionar Aluno
-          </button>
+      <div class="rel-chart-item">
+        <div class="rel-chart-icon">🌤️</div>
+        <div>
+          <div class="rel-chart-name">Turnos Preferidos</div>
+          <div class="rel-chart-desc">Proporção entre Manhã, Tarde e Tanto Faz — auxilia no planejamento de turmas.</div>
         </div>
-
-        <div id="alunos-list" class="alunos-list"></div>
-
-        <div id="alunos-empty" class="empty-state">
-          <span class="empty-icon">🎒</span>
-          <p>Nenhum aluno adicionado ainda.<br>Adicione pelo menos um aluno para continuar.</p>
-          <button class="btn btn-secondary" onclick="adicionarAluno()">
-            + Adicionar Primeiro Aluno
-          </button>
+      </div>
+      <div class="rel-chart-item">
+        <div class="rel-chart-icon">📅</div>
+        <div>
+          <div class="rel-chart-name">Evolução Mensal</div>
+          <div class="rel-chart-desc">Linha do tempo com o volume de solicitações ao longo dos meses — identifica sazonalidade.</div>
         </div>
-
-        <hr class="divider">
-
-        <div style="display: flex; justify-content: flex-end; gap: 0.75rem; flex-wrap: wrap">
-          <button class="btn btn-secondary" onclick="limparFormulario()">🗑️ Limpar tudo</button>
-          <button class="btn btn-primary" onclick="enviarSolicitacao()" id="btn-enviar">
-            📤 Enviar Solicitação
-          </button>
+      </div>
+      <div class="rel-chart-item">
+        <div class="rel-chart-icon">🚪</div>
+        <div>
+          <div class="rel-chart-name">Motivos de Saída</div>
+          <div class="rel-chart-desc">Principais razões pelas quais as famílias estão deixando a escola anterior.</div>
+        </div>
+      </div>
+      <div class="rel-chart-item">
+        <div class="rel-chart-icon">⭐</div>
+        <div>
+          <div class="rel-chart-name">Motivos de Escolha do Plenus</div>
+          <div class="rel-chart-desc">O que mais atrai as famílias: reputação, qualidade pedagógica, indicação, localização e outros.</div>
+        </div>
+      </div>
+      <div class="rel-chart-item">
+        <div class="rel-chart-icon">💡</div>
+        <div>
+          <div class="rel-chart-name">Dados sempre atualizados</div>
+          <div class="rel-chart-desc">Os relatórios são recalculados ao vivo com os dados reais do banco a cada acesso à tela.</div>
         </div>
       </div>
     </div>
+  </div>
+</section>
 
-    <!-- ======= SEÇÃO: MINHAS SOLICITAÇÕES ======= -->
-    <div id="section-minhas-solicitacoes" class="section">
-      <div class="section-header">
-        <h1>Minhas Solicitações</h1>
-        <p>Acompanhe o status das suas solicitações de vaga</p>
-      </div>
-
-      <div id="solicitacoes-list" class="solicitacoes-list">
-        <div class="empty-state">
-          <span class="empty-icon">⏳</span>
-          <p>Carregando solicitações...</p>
-        </div>
-      </div>
+<!-- ═══════════ TECNOLOGIA ═══════════ -->
+<section id="tecnologia">
+  <div class="container" style="text-align:center">
+    <div class="section-header" style="align-items:center;display:flex;flex-direction:column">
+      <span class="section-eyebrow">Stack técnico</span>
+      <h2 class="section-title">Construído com tecnologia moderna</h2>
+      <p class="section-sub">Sem frameworks pesados. Rápido, seguro e fácil de manter.</p>
     </div>
-
-    <!-- ======= SEÇÃO: PERFIL ======= -->
-    <div id="section-perfil" class="section">
-      <div class="section-header">
-        <h1>Meu Perfil</h1>
-        <p>Gerencie suas informações de contato</p>
-      </div>
-
-      <div class="card" style="max-width: 580px">
-        <div class="profile-header">
-          <div class="profile-info">
-            <h2 id="profile-nome-display">Seu nome</h2>
-            <p id="profile-email-display"></p>
-          </div>
-        </div>
-
-        <hr class="divider">
-
-        <div id="perfil-alert"></div>
-
-        <div class="form-grid">
-          <div class="form-group">
-            <label for="perfil-nome">Nome completo</label>
-            <input type="text" id="perfil-nome" placeholder="Seu nome completo">
-          </div>
-          <div class="form-group">
-            <label for="perfil-telefone">Telefone / WhatsApp</label>
-            <input type="tel" id="perfil-telefone" placeholder="(00) 00000-0000">
-          </div>
-        </div>
-
-        <div style="margin-top: 1.25rem">
-          <button class="btn btn-primary" onclick="salvarPerfil()" id="btn-salvar-perfil">
-            💾 Salvar Alterações
-          </button>
-        </div>
-      </div>
-
-      <!-- Card: Alterar E-mail -->
-      <div class="card" style="max-width: 580px; margin-top: 1rem">
-        <div class="card-title">📧 Alterar E-mail</div>
-        <div id="email-alert"></div>
-        <div class="form-group" style="margin-bottom:0.75rem">
-          <label for="novo-email">Novo endereço de e-mail</label>
-          <input type="email" id="novo-email" placeholder="novo@email.com">
-        </div>
-        <p style="font-size:0.8rem; color:var(--gray-dark); margin-bottom:1rem; line-height:1.5">
-          Um link de confirmação será enviado ao novo e-mail. A alteração só é efetivada após clicar no link.
-        </p>
-        <button class="btn btn-secondary" onclick="alterarEmail()" id="btn-alterar-email">
-          📧 Enviar link de confirmação
-        </button>
-      </div>
+    <div class="tech-grid">
+      <div class="tech-pill"><span>🌐</span> HTML5 + CSS3</div>
+      <div class="tech-pill"><span>⚡</span> JavaScript (Vanilla)</div>
+      <div class="tech-pill"><span>🗄️</span> Supabase (PostgreSQL)</div>
+      <div class="tech-pill"><span>🔒</span> Row Level Security</div>
+      <div class="tech-pill"><span>📈</span> Chart.js 4</div>
+      <div class="tech-pill"><span>🔔</span> SweetAlert2</div>
+      <div class="tech-pill"><span>🔑</span> Supabase Auth</div>
+      <div class="tech-pill"><span>🚀</span> Zero dependências de build</div>
     </div>
+  </div>
+</section>
 
-  </main>
-</div>
+<!-- ═══════════ CTA FINAL ═══════════ -->
+<section class="cta-section">
+  <h2>Pronto para usar <span>agora mesmo</span></h2>
+  <p>Acesse o sistema, solicite ou gerencie vagas e tenha controle total do processo de admissão.</p>
+  <a href="index.html" class="cta-btn">Acessar o Sistema →</a>
+</section>
+
+<footer>
+  © 2025 Colégio Plenus · Sistema de Controle de Vagas · Desenvolvido com foco em simplicidade e eficiência
+</footer>
 
 </body>
 </html>

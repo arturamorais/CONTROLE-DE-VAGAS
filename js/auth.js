@@ -59,7 +59,7 @@ async function login() {
   if (colab && colab.ativo) {
     window.location.href = 'admin.html';
   } else {
-    window.location.href = 'dashboard.html';
+    window.location.href = 'inicio.html';
   }
 }
 

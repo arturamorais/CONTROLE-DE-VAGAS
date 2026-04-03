@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mv dashboard.html inicio.html)",
+      "Bash(mv apresentacao.html dashboard.html)"
+    ]
+  }
+}

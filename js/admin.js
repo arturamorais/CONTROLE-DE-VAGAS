@@ -121,7 +121,7 @@ async function init() {
     .single();
 
   if (!colab || !colab.ativo) {
-    window.location.href = 'dashboard.html';
+    window.location.href = 'inicio.html';
     return;
   }
 
