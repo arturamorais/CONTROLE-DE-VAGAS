@@ -54,6 +54,7 @@ async function init() {
   if (!data.user) { window.location.href = 'index.html'; return; }
   await carregarPerfil(data.user);
   await carregarStats(data.user.id);
+  await carregarOverview(data.user.id);
   // Exibe botão de gestão se o usuário também for colaborador ativo
   const { data: colab } = await cliente
     .from('colaboradores').select('id').eq('id', data.user.id).eq('ativo', true).single();
@@ -154,6 +155,93 @@ async function alterarEmail() {
   if (error) { alertDiv.innerHTML = `<div class="alert alert-error">${error.message}</div>`; return; }
   alertDiv.innerHTML = '<div class="alert alert-info">Link enviado! Verifique o novo e-mail para confirmar a alteração.</div>';
   document.getElementById('novo-email').value = '';
+}
+
+// ============================================================
+//  OVERVIEW (início)
+// ============================================================
+async function carregarOverview(userId) {
+  const { data } = await cliente
+    .from('interesse_vagas')
+    .select('id, status, created_at, alunos(nome_aluno, segmento, turma, status_aluno), historico_solicitacoes(descricao, autor_tipo, autor_nome, created_at)')
+    .eq('usuario_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (!data?.length) {
+    document.getElementById('overview-solicitacoes').innerHTML = `
+      <div class="empty-state" style="padding:1.5rem">
+        <span class="empty-icon">📭</span>
+        <p>Nenhuma solicitação ainda.</p>
+        <button class="btn btn-primary btn-sm" onclick="showSection('nova-solicitacao')">📝 Fazer Solicitação</button>
+      </div>`;
+    return;
+  }
+
+  // ---- alertas contextuais ----
+  const alertas = [];
+  data.forEach(s => {
+    if (s.status === 'aprovado') {
+      alertas.push({ cor: '#15803d', bg: '#f0fdf4', border: '#bbf7d0', icon: '🎉', msg: `Solicitação <strong>aprovada</strong>! Entre em contato com a escola para efetivar a matrícula.` });
+    }
+    if (s.status === 'reprovado') {
+      alertas.push({ cor: '#b91c1c', bg: '#fef2f2', border: '#fecaca', icon: '📩', msg: `Uma solicitação foi <strong>reprovada</strong>. Verifique o histórico para mais detalhes.` });
+    }
+  });
+
+  const cardAlertas = document.getElementById('card-proximos-passos');
+  if (alertas.length) {
+    cardAlertas.style.display = '';
+    cardAlertas.innerHTML = alertas.map(a => `
+      <div style="display:flex;align-items:flex-start;gap:0.75rem;padding:0.875rem 1.125rem;background:${a.bg};border:1px solid ${a.border};border-radius:var(--radius-sm);margin-bottom:0.5rem">
+        <span style="font-size:1.2rem;flex-shrink:0">${a.icon}</span>
+        <span style="font-size:0.855rem;color:${a.cor};line-height:1.55">${a.msg}</span>
+      </div>`).join('');
+  }
+
+  // ---- mini cards de solicitações ----
+  const STATUS_CONFIG = {
+    pendente:   { icon: '⏳', cor: '#92400e', bg: '#fef3c7', label: 'Pendente' },
+    em_analise: { icon: '🔍', cor: '#1e40af', bg: '#eff6ff', label: 'Em Análise' },
+    aprovado:   { icon: '✅', cor: '#15803d', bg: '#f0fdf4', label: 'Aprovado' },
+    reprovado:  { icon: '✕',  cor: '#b91c1c', bg: '#fef2f2', label: 'Reprovado' }
+  };
+
+  const PROXIMOS = {
+    pendente:   'Aguardando análise da equipe Plenus.',
+    em_analise: 'Em análise — a equipe entrará em contato em breve.',
+    aprovado:   'Entre em contato com a escola para efetivar a matrícula.',
+    reprovado:  'Confira o histórico para entender o motivo.'
+  };
+
+  document.getElementById('overview-solicitacoes').innerHTML = data.map(s => {
+    const cfg      = STATUS_CONFIG[s.status] || STATUS_CONFIG.pendente;
+    const dataFmt  = new Date(s.created_at).toLocaleDateString('pt-BR');
+    const alunos   = (s.alunos || []).map(a => escapeHtmlDash(a.nome_aluno)).join(', ') || '–';
+    const ultimaNota = [...(s.historico_solicitacoes || [])]
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+    const notaHtml = ultimaNota ? `
+      <div style="margin-top:0.5rem;font-size:0.775rem;color:var(--gray-dark);background:var(--white-smoke);border-left:3px solid ${cfg.bg === '#f0fdf4' ? '#22c55e' : '#e2e8f0'};padding:0.35rem 0.625rem;border-radius:0 0.375rem 0.375rem 0;line-height:1.5">
+        💬 ${escapeHtmlDash(ultimaNota.descricao)} <span style="color:var(--gray)">· ${ultimaNota.autor_tipo === 'colaborador' ? 'Equipe Plenus' : 'Você'}</span>
+      </div>` : '';
+
+    return `
+      <div style="display:flex;align-items:flex-start;gap:0.875rem;padding:0.875rem 0;border-bottom:1px solid var(--gray-light);cursor:pointer" onclick="showSection('minhas-solicitacoes')">
+        <div style="width:38px;height:38px;border-radius:0.625rem;background:${cfg.bg};display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">${cfg.icon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.15rem">
+            <span style="font-size:0.855rem;font-weight:700;color:var(--navy-mid)">${alunos}</span>
+            <span class="status-badge status-${s.status}" style="font-size:0.65rem">${cfg.label}</span>
+          </div>
+          <div style="font-size:0.775rem;color:var(--gray-dark)">${PROXIMOS[s.status] || ''}</div>
+          ${notaHtml}
+          <div style="font-size:0.7rem;color:var(--gray);margin-top:0.25rem">${dataFmt}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function escapeHtmlDash(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 // ============================================================
@@ -538,16 +626,24 @@ async function carregarSolicitacoes() {
     const historico = [...(s.historico_solicitacoes || [])]
       .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     const historicoHtml = historico.length ? `
-      <div class="historico-timeline">
-        ${historico.map(h => `
-          <div class="historico-item">
-            <div class="historico-dot ${h.autor_tipo}"></div>
-            <div class="historico-info">
-              <span class="historico-desc">${h.descricao}</span>
-              <span class="historico-meta">${new Date(h.created_at).toLocaleString('pt-BR')} · ${h.autor_tipo === 'colaborador' ? 'Equipe Plenus' : 'Você'}</span>
-            </div>
-          </div>`).join('')}
-      </div>` : '';
+      <details style="margin-top:0.75rem">
+        <summary style="font-size:0.775rem;font-weight:700;color:var(--gray-dark);cursor:pointer;list-style:none;display:flex;align-items:center;gap:0.4rem;user-select:none">
+          📋 Histórico (${historico.length} entrada${historico.length !== 1 ? 's' : ''})
+        </summary>
+        <div style="margin-top:0.625rem;padding-left:0.5rem;border-left:2px solid var(--gray-light);display:flex;flex-direction:column;gap:0.625rem">
+          ${historico.map(h => {
+            const isColab = h.autor_tipo === 'colaborador';
+            return `
+            <div style="display:flex;gap:0.625rem;align-items:flex-start">
+              <div style="width:28px;height:28px;border-radius:50%;background:${isColab ? '#fff7ed' : '#eff6ff'};border:2px solid ${isColab ? '#fed7aa' : '#bfdbfe'};display:flex;align-items:center;justify-content:center;font-size:0.7rem;flex-shrink:0;margin-top:1px">${isColab ? '🏫' : '👤'}</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:0.8rem;font-weight:600;color:var(--navy-mid);line-height:1.45">${h.descricao}</div>
+                <div style="font-size:0.7rem;color:var(--gray);margin-top:0.1rem">${new Date(h.created_at).toLocaleString('pt-BR')} · <span style="font-weight:600;color:${isColab ? '#ea580c' : '#2563eb'}">${isColab ? 'Equipe Plenus' : 'Você'}</span></div>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </details>` : '';
 
     const badgeLabel = temRessalva ? 'Aprovado com ressalvas' : statusLabel;
 

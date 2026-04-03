@@ -695,6 +695,11 @@ function filtrarSolicitacoes() {
   renderSolicitacoes(lista);
 }
 
+function diasDesde(dateStr) {
+  const diff = Math.floor((Date.now() - new Date(dateStr)) / 86400000);
+  return diff;
+}
+
 function renderSolicitacoes(lista) {
   const container = document.getElementById('solicitacoes-list');
   if (!lista.length) {
@@ -719,6 +724,15 @@ function renderSolicitacoes(lista) {
     const resp    = s.responsavel || {};
     const alunos  = s.alunos || [];
     const dataFmt = new Date(s.created_at).toLocaleDateString('pt-BR');
+
+    const dias = diasDesde(s.created_at);
+    const slaAtivo = (s.status === 'pendente' || s.status === 'em_analise');
+    const slaCor   = dias >= 7 ? '#dc2626' : dias >= 3 ? '#d97706' : '#16a34a';
+    const slaBg    = dias >= 7 ? '#fee2e2' : dias >= 3 ? '#fef3c7' : '#dcfce7';
+    const slaBorder= dias >= 7 ? '#fecaca' : dias >= 3 ? '#fde68a' : '#bbf7d0';
+    const slaHtml  = slaAtivo
+      ? `<span style="font-size:0.68rem;font-weight:700;padding:0.2rem 0.55rem;border-radius:9999px;background:${slaBg};color:${slaCor};border:1px solid ${slaBorder};white-space:nowrap">⏱ ${dias === 0 ? 'Hoje' : dias === 1 ? '1 dia' : dias + ' dias'}</span>`
+      : '';
 
     const totalAlunos  = alunos.length;
     const aprov        = alunos.filter(a => (a.status_aluno || 'pendente') === 'aprovado').length;
@@ -748,6 +762,7 @@ function renderSolicitacoes(lista) {
         <div class="card-row-top">
           <div class="meta">
             <span class="status-badge status-${s.status}">${badgeLabel}</span>
+            ${slaHtml}
             <span class="card-data">📅 ${dataFmt}</span>
           </div>
           <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
@@ -1937,6 +1952,39 @@ async function carregarRelatorios() {
       scales: { x: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f1f5f9' } }, y: { grid: { display: false }, ticks: { font: { size: 11 } } } }
     }
   });
+}
+
+function exportarCSV() {
+  if (!todasSolicitacoes.length) { showToast('⚠️ Carregue as solicitações primeiro.'); return; }
+
+  const STATUS = { pendente: 'Pendente', em_analise: 'Em Análise', aprovado: 'Aprovado', reprovado: 'Reprovado' };
+  const SEG    = { educacao_infantil: 'Ed. Infantil', fundamental1: 'Fund. 1', fundamental2: 'Fund. 2', ensino_medio: 'Ensino Médio' };
+  const TURNO  = { manha: 'Manhã', tarde: 'Tarde', tanto_faz: 'Tanto Faz' };
+
+  const linhas = [['Responsável','E-mail','Telefone','Status','Data','Aluno','Segmento','Série','Turno','Mensalidade Anterior','Desconto Almejado (%)','Tipo Permuta']];
+
+  todasSolicitacoes.forEach(s => {
+    const r    = s.responsavel || {};
+    const data = new Date(s.created_at).toLocaleDateString('pt-BR');
+    const alunos = s.alunos || [];
+    if (!alunos.length) {
+      linhas.push([r.nome||'', r.email||'', r.telefone||'', STATUS[s.status]||s.status, data, '', '', '', '', s.valor_mensalidade_anterior||'', s.taxa_desconto_almejada||'', s.tipo_permuta||'']);
+    } else {
+      alunos.forEach(a => {
+        linhas.push([r.nome||'', r.email||'', r.telefone||'', STATUS[s.status]||s.status, data, a.nome_aluno||'', SEG[a.segmento]||a.segmento||'', a.turma||'', TURNO[a.turno]||a.turno||'', s.valor_mensalidade_anterior||'', s.taxa_desconto_almejada||'', s.tipo_permuta||'']);
+      });
+    }
+  });
+
+  const csv = linhas.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `solicitacoes_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ CSV exportado!');
 }
 
 async function carregarLogs() {

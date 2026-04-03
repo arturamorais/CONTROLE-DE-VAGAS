@@ -12,6 +12,12 @@
   <script src="js/supabase.js"></script>
   <script src="js/dashboard.js" defer></script>
   <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="manifest" href="manifest.json">
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+  </script>
 </head>
 <body>
 
@@ -101,7 +107,7 @@
       </div>
 
       <div class="stats-grid">
-        <div class="stat-card blue">
+        <div class="stat-card blue" style="cursor:pointer" onclick="showSection('minhas-solicitacoes')">
           <div class="stat-icon-wrap">📋</div>
           <div class="stat-value" id="stat-solicitacoes">–</div>
           <div class="stat-label">Solicitações</div>
@@ -115,6 +121,20 @@
           <div class="stat-icon-wrap">✅</div>
           <div class="stat-value" id="stat-aprovados">–</div>
           <div class="stat-label">Aprovadas</div>
+        </div>
+      </div>
+
+      <!-- Alertas contextuais -->
+      <div id="card-proximos-passos" style="display:none;margin-bottom:1.25rem"></div>
+
+      <!-- Últimas solicitações resumidas -->
+      <div class="card" style="margin-bottom:1.25rem">
+        <div class="card-title" style="justify-content:space-between">
+          <span>⏰ Minhas Solicitações</span>
+          <button class="btn btn-secondary btn-sm" onclick="showSection('minhas-solicitacoes')">Ver todas</button>
+        </div>
+        <div id="overview-solicitacoes">
+          <div class="empty-state" style="padding:1.5rem"><span class="empty-icon">⏳</span><p>Carregando...</p></div>
         </div>
       </div>
 

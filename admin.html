@@ -13,6 +13,12 @@
   <script src="js/supabase.js"></script>
   <script src="js/admin.js" defer></script>
   <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="manifest" href="manifest.json">
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+  </script>
 </head>
 <body>
 
@@ -449,9 +455,12 @@
 
     <!-- ======= SEÇÃO: RELATÓRIOS ======= -->
     <div id="section-relatorios" class="section">
-      <div class="section-header">
-        <h1>Relatório Analítico</h1>
-        <p>Visão estratégica das solicitações de vagas</p>
+      <div class="section-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem">
+        <div>
+          <h1>Relatório Analítico</h1>
+          <p>Visão estratégica das solicitações de vagas</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="exportarCSV()" style="flex-shrink:0">⬇️ Exportar CSV</button>
       </div>
 
       <!-- KPIs -->
