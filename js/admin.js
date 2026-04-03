@@ -1699,21 +1699,30 @@ function renderAlocacao() {
   }
 
   container.innerHTML = lista.map(a => {
-    const alocado = a.alocacoes?.[0];
+    const alocado   = a.alocacoes?.[0];
     const turmaInfo = alocado?.turmas
       ? `${alocado.turmas.serie} – ${alocado.turmas.nome_turma} (${TURNO_LABEL_FULL[alocado.turmas.turno] || alocado.turmas.turno})`
       : null;
+
+    const statusEnturma = turmaInfo
+      ? `<div style="display:inline-flex;align-items:center;gap:0.35rem;margin-top:0.3rem;font-size:0.775rem;font-weight:600;color:#15803d;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:0.4rem;padding:0.2rem 0.6rem">
+           🏫 <span>${escapeHtml(turmaInfo)}</span>
+         </div>`
+      : `<div style="display:inline-flex;align-items:center;gap:0.35rem;margin-top:0.3rem;font-size:0.775rem;font-weight:600;color:#b45309;background:#fefce8;border:1px solid #fde68a;border-radius:0.4rem;padding:0.2rem 0.6rem">
+           ⏳ Aguardando enturmação
+         </div>`;
+
     return `
       <div class="aluno-alocar-card">
         <div style="flex:1;min-width:0">
           <div style="font-weight:700;font-size:0.875rem;color:var(--navy-mid)">${escapeHtml(a.nome_aluno)}</div>
           <div style="font-size:0.75rem;color:var(--gray-dark)">${SEGMENTO_LABEL[a.segmento] || a.segmento} · ${a.turma} · ${TURNO_LABEL[a.turno] || a.turno}</div>
           <div style="font-size:0.73rem;color:var(--gray)">Responsável: ${escapeHtml(a.responsavel?.nome || '–')}</div>
+          ${statusEnturma}
         </div>
         <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;flex-wrap:wrap">
           ${turmaInfo
-            ? `<span style="font-size:0.75rem;font-weight:600;color:#15803d;background:#dcfce7;padding:0.25rem 0.625rem;border-radius:9999px">🏫 ${escapeHtml(turmaInfo)}</span>
-               <button class="btn btn-secondary btn-sm" onclick="abrirAlocarModal('${a.id}','${escapeHtml(a.nome_aluno)}','${a.segmento}')">✏️ Alterar</button>
+            ? `<button class="btn btn-secondary btn-sm" onclick="abrirAlocarModal('${a.id}','${escapeHtml(a.nome_aluno)}','${a.segmento}')">✏️ Alterar</button>
                <button class="btn btn-danger btn-sm btn-icon" title="Remover da turma" onclick="removerAlocacao('${a.id}','${alocado.id}')">✕</button>`
             : `<button class="btn btn-primary btn-sm" onclick="abrirAlocarModal('${a.id}','${escapeHtml(a.nome_aluno)}','${a.segmento}')">🏫 Enturmar</button>`
           }
