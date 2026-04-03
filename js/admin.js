@@ -1731,23 +1731,25 @@ function _destroyChart(id) {
 async function carregarRelatorios() {
   // 1. Busca dados
   const [{ data: solics }, { data: alunos }] = await Promise.all([
-    cliente.from('interesse_vagas').select('id, status, motivo_transferencia, motivo_escolha_plenus, valor_mensalidade_anterior, created_at'),
+    cliente.from('interesse_vagas').select('id, status, motivo_transferencia, motivo_escolha_plenus, valor_mensalidade_anterior, created_at, usuario_id'),
     cliente.from('alunos').select('interesse_id, segmento, turma, turno')
   ]);
 
   if (!solics || !alunos) return;
 
   // ---- KPIs ----
-  const total     = solics.length;
-  const aprovados = solics.filter(s => s.status === 'aprovado').length;
-  const taxa      = total > 0 ? Math.round((aprovados / total) * 100) : 0;
-  const tickets   = solics.map(s => s.valor_mensalidade_anterior).filter(v => v > 0);
-  const ticketMed = tickets.length ? (tickets.reduce((a,b) => a+b, 0) / tickets.length) : 0;
+  const total          = solics.length;
+  const aprovados      = solics.filter(s => s.status === 'aprovado').length;
+  const taxa           = total > 0 ? Math.round((aprovados / total) * 100) : 0;
+  const tickets        = solics.map(s => s.valor_mensalidade_anterior).filter(v => v > 0);
+  const ticketMed      = tickets.length ? (tickets.reduce((a,b) => a+b, 0) / tickets.length) : 0;
+  const responsaveis   = new Set(solics.map(s => s.usuario_id).filter(Boolean)).size;
 
-  document.getElementById('rel-kpi-total').textContent  = total;
-  document.getElementById('rel-kpi-taxa').textContent   = taxa + '%';
-  document.getElementById('rel-kpi-alunos').textContent = alunos.length;
-  document.getElementById('rel-kpi-ticket').textContent = ticketMed > 0
+  document.getElementById('rel-kpi-total').textContent        = total;
+  document.getElementById('rel-kpi-responsaveis').textContent = responsaveis;
+  document.getElementById('rel-kpi-taxa').textContent         = taxa + '%';
+  document.getElementById('rel-kpi-alunos').textContent       = alunos.length;
+  document.getElementById('rel-kpi-ticket').textContent       = ticketMed > 0
     ? ticketMed.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
     : '–';
 
@@ -1956,9 +1958,12 @@ async function carregarLogs() {
 
   // Stats
   const hoje = new Date().toDateString();
+  const uniqResp  = new Set(todosLogs.filter(l => l.tipo_usuario === 'responsavel').map(l => l.usuario_id)).size;
+  const uniqColab = new Set(todosLogs.filter(l => l.tipo_usuario === 'colaborador').map(l => l.usuario_id)).size;
+
   document.getElementById('log-stat-total').textContent         = todosLogs.length;
-  document.getElementById('log-stat-responsaveis').textContent  = todosLogs.filter(l => l.tipo_usuario === 'responsavel').length;
-  document.getElementById('log-stat-colaboradores').textContent = todosLogs.filter(l => l.tipo_usuario === 'colaborador').length;
+  document.getElementById('log-stat-responsaveis').textContent  = uniqResp;
+  document.getElementById('log-stat-colaboradores').textContent = uniqColab;
   document.getElementById('log-stat-hoje').textContent          = todosLogs.filter(l => new Date(l.created_at).toDateString() === hoje).length;
 
   // Preencher select de ações com o que existir nos dados
