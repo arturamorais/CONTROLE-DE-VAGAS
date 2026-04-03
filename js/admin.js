@@ -1520,7 +1520,7 @@ function switchEnturmarTab(tab) {
 async function carregarEnturmar() {
   const { data, error } = await cliente
     .from('turmas')
-    .select('*, alocacoes(id)')
+    .select('*, alocacoes(id, alunos(id, nome_aluno, segmento, turma))')
     .order('segmento').order('serie').order('nome_turma');
   if (error) { document.getElementById('turmas-lista').innerHTML = `<div class="alert alert-error">${error.message}</div>`; return; }
   todasTurmas = data || [];
@@ -1554,16 +1554,40 @@ function renderTurmas() {
         const pct        = alocados / t.capacidade;
         const vagasCls   = pct >= 1 ? 'cheia' : pct >= 0.8 ? 'quase' : 'ok';
         const vagasLabel = pct >= 1 ? '🔴 Lotada' : `${livres} vaga${livres !== 1 ? 's' : ''}`;
+
+        const alunosHtml = alocados > 0
+          ? (t.alocacoes || []).map((aloc, i) => {
+              const al = aloc.alunos;
+              return al
+                ? `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;border-bottom:1px solid var(--gray-light)">
+                     <span style="font-size:0.7rem;font-weight:700;color:var(--gray);width:18px;text-align:right;flex-shrink:0">${i+1}.</span>
+                     <span style="font-size:0.8rem;font-weight:600;color:var(--navy-mid);flex:1">${escapeHtml(al.nome_aluno)}</span>
+                     <span style="font-size:0.7rem;color:var(--gray-dark)">${al.turma || ''}</span>
+                   </div>`
+                : '';
+            }).join('')
+          : `<div style="font-size:0.78rem;color:var(--gray);padding:0.5rem 0">Nenhum aluno enturmado.</div>`;
+
         return `
-          <div class="turma-card">
-            <div class="turma-card-info">
-              <span class="turma-card-nome">${t.serie} – ${t.nome_turma}</span>
-              <span class="turma-card-meta">${TURNO_LABEL_FULL[t.turno] || t.turno} · ${alocados}/${t.capacidade} alunos</span>
+          <div class="turma-card" style="flex-direction:column;align-items:stretch;gap:0">
+            <div style="display:flex;align-items:center;gap:0.75rem">
+              <div class="turma-card-info" style="flex:1">
+                <span class="turma-card-nome">${t.serie} – ${t.nome_turma}</span>
+                <span class="turma-card-meta">${TURNO_LABEL_FULL[t.turno] || t.turno} · ${alocados}/${t.capacidade} alunos</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
+                <span class="turma-vagas ${vagasCls}">${vagasLabel}</span>
+                <button class="btn btn-danger btn-sm btn-icon" title="Excluir" onclick="excluirTurma('${t.id}')">✕</button>
+              </div>
             </div>
-            <div style="display:flex;align-items:center;gap:0.5rem">
-              <span class="turma-vagas ${vagasCls}">${vagasLabel}</span>
-              <button class="btn btn-danger btn-sm btn-icon" title="Excluir" onclick="excluirTurma('${t.id}')">✕</button>
-            </div>
+            <details style="margin-top:0.5rem">
+              <summary style="font-size:0.75rem;font-weight:600;color:var(--blue);cursor:pointer;list-style:none;display:flex;align-items:center;gap:0.35rem">
+                👥 Ver alunos enturmados (${alocados})
+              </summary>
+              <div style="margin-top:0.5rem;padding:0 0.25rem">
+                ${alunosHtml}
+              </div>
+            </details>
           </div>`;
       }).join('')}
     </div>`).join('');
@@ -1779,13 +1803,11 @@ async function confirmarAlocacao() {
 
   btn.disabled = true; btn.innerHTML = '<span class="loading"></span> Salvando...';
 
-  const { data: { user } } = await cliente.auth.getUser();
-
   // Remove alocação anterior se existir
   await cliente.from('alocacoes').delete().eq('aluno_id', alunoAlocandoId);
 
   const { error } = await cliente.from('alocacoes').insert({
-    aluno_id: alunoAlocandoId, turma_id: turmaId, colaborador_id: user.id
+    aluno_id: alunoAlocandoId, turma_id: turmaId
   });
 
   btn.disabled = false; btn.innerHTML = '🏫 Confirmar Enturmar';
