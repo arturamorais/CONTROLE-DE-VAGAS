@@ -556,7 +556,11 @@ function showSection(name) {
     'perfil':         'Meu Perfil'
   };
   document.querySelector('.topbar-title').textContent = titles[name] || '';
-  if (name === 'solicitacoes')  carregarSolicitacoes();
+  if (name === 'solicitacoes') {
+    document.getElementById('filtro-status').value = '';
+    document.getElementById('busca-input').value   = '';
+    carregarSolicitacoes();
+  }
   if (name === 'enturmar')      carregarEnturmar();
   if (name === 'relatorios')    carregarRelatorios();
   if (name === 'logs')          carregarLogs();
