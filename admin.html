@@ -465,7 +465,7 @@
         <button class="btn btn-secondary btn-sm" onclick="exportarCSV()" style="flex-shrink:0">⬇️ Exportar CSV</button>
       </div>
 
-      <!-- KPIs -->
+      <!-- KPIs linha 1 -->
       <div class="rel-kpi-grid" id="rel-kpis">
         <div class="rel-kpi-card">
           <div class="rel-kpi-icon">📋</div>
@@ -494,6 +494,35 @@
         </div>
       </div>
 
+      <!-- KPIs linha 2 -->
+      <div class="rel-kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:1.25rem">
+        <div class="rel-kpi-card green">
+          <div class="rel-kpi-icon">🎓</div>
+          <div class="rel-kpi-value" id="rel-kpi-matriculados">–</div>
+          <div class="rel-kpi-label">Matriculados</div>
+        </div>
+        <div class="rel-kpi-card blue">
+          <div class="rel-kpi-icon">🏫</div>
+          <div class="rel-kpi-value" id="rel-kpi-enturmados">–</div>
+          <div class="rel-kpi-label">Alunos Enturmados</div>
+        </div>
+        <div class="rel-kpi-card">
+          <div class="rel-kpi-icon">⏳</div>
+          <div class="rel-kpi-value" id="rel-kpi-aguardando">–</div>
+          <div class="rel-kpi-label">Aguardando Enturmar</div>
+        </div>
+        <div class="rel-kpi-card orange">
+          <div class="rel-kpi-icon">🚫</div>
+          <div class="rel-kpi-value" id="rel-kpi-cancelados">–</div>
+          <div class="rel-kpi-label">Cancelados</div>
+        </div>
+        <div class="rel-kpi-card">
+          <div class="rel-kpi-icon">✕</div>
+          <div class="rel-kpi-value" id="rel-kpi-reprovados">–</div>
+          <div class="rel-kpi-label">Reprovados</div>
+        </div>
+      </div>
+
       <!-- Linha 1: Status + Segmentos -->
       <div class="rel-row-2">
         <div class="card rel-chart-card">
@@ -503,7 +532,7 @@
           </div>
         </div>
         <div class="card rel-chart-card">
-          <div class="card-title">🏫 Solicitações por Segmento</div>
+          <div class="card-title">🏫 Alunos por Segmento</div>
           <div class="rel-chart-wrap">
             <canvas id="chart-segmentos"></canvas>
           </div>
@@ -526,7 +555,7 @@
         </div>
       </div>
 
-      <!-- Linha 3: Evolução mensal (largura total) -->
+      <!-- Linha 3: Evolução mensal -->
       <div class="card" style="margin-bottom:1.5rem">
         <div class="card-title">📅 Evolução de Solicitações por Mês</div>
         <div class="rel-chart-wrap" style="height:220px">
@@ -534,7 +563,15 @@
         </div>
       </div>
 
-      <!-- Linha 4: Motivos saída + Motivos Plenus -->
+      <!-- Linha 4: Ocupação das turmas -->
+      <div class="card" style="margin-bottom:1.5rem">
+        <div class="card-title">🏫 Ocupação das Turmas</div>
+        <div class="rel-chart-wrap rel-chart-tall" style="min-height:200px">
+          <canvas id="chart-turmas"></canvas>
+        </div>
+      </div>
+
+      <!-- Linha 5: Motivos saída + Motivos Plenus -->
       <div class="rel-row-2">
         <div class="card rel-chart-card">
           <div class="card-title">🚪 Motivos de Saída da Escola Anterior</div>

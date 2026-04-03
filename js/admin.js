@@ -1602,6 +1602,7 @@ function renderTurmas() {
               </div>
               <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
                 <span class="turma-vagas ${vagasCls}">${vagasLabel}</span>
+                <button class="btn btn-secondary btn-sm btn-icon" title="Imprimir lista" onclick="imprimirTurma('${t.id}')">🖨️</button>
                 <button class="btn btn-danger btn-sm btn-icon" title="Excluir" onclick="excluirTurma('${t.id}')">✕</button>
               </div>
             </div>
@@ -1711,6 +1712,56 @@ async function excluirTurma(id) {
   if (error) { showToast('❌ Erro: ' + error.message); return; }
   showToast('✅ Turma excluída.');
   await carregarEnturmar();
+}
+
+function imprimirTurma(turmaId) {
+  const t = todasTurmas.find(x => x.id === turmaId);
+  if (!t) return;
+  const alunos = (t.alocacoes || []).map(a => a.alunos).filter(Boolean);
+
+  const linhas = alunos.length
+    ? alunos.map((a, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${a.nome_aluno}</td>
+          <td>${a.turma || '–'}</td>
+        </tr>`).join('')
+    : `<tr><td colspan="3" style="text-align:center;color:#94a3b8">Nenhum aluno enturmado.</td></tr>`;
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Lista de Alunos — ${t.serie} – ${t.nome_turma}</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 2rem; color: #0f172a; }
+    h1 { font-size: 1.2rem; margin-bottom: 0.25rem; }
+    .meta { font-size: 0.85rem; color: #475569; margin-bottom: 1.5rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th { background: #0f172a; color: white; padding: 0.5rem 0.75rem; text-align: left; }
+    td { padding: 0.45rem 0.75rem; border-bottom: 1px solid #e2e8f0; }
+    tr:nth-child(even) td { background: #f8fafc; }
+    .footer { margin-top: 2rem; font-size: 0.75rem; color: #94a3b8; }
+    @media print { body { padding: 0; } }
+  </style>
+</head>
+<body>
+  <h1>🏫 ${t.serie} – ${t.nome_turma}</h1>
+  <div class="meta">
+    ${SEGMENTO_LABEL[t.segmento] || t.segmento} · ${TURNO_LABEL_FULL[t.turno] || t.turno} · ${alunos.length}/${t.capacidade} alunos
+  </div>
+  <table>
+    <thead><tr><th>#</th><th>Nome do Aluno</th><th>Série Solicitada</th></tr></thead>
+    <tbody>${linhas}</tbody>
+  </table>
+  <div class="footer">Colégio Plenus · Gerado em ${new Date().toLocaleString('pt-BR')}</div>
+  <script>window.onload = () => { window.print(); }<\/script>
+</body>
+</html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
 }
 
 async function removerAlunoDaTurma(alunoId, alocacaoId, nomeAluno, nomeTurma) {
@@ -1928,16 +1979,18 @@ function _destroyChart(id) {
 
 async function carregarRelatorios() {
   // 1. Busca dados
-  const [{ data: solics }, { data: alunos }] = await Promise.all([
+  const [{ data: solics }, { data: alunos }, { data: turmas }, { data: alocacoes }] = await Promise.all([
     cliente.from('interesse_vagas').select('id, status, motivo_transferencia, motivo_escolha_plenus, valor_mensalidade_anterior, created_at, usuario_id'),
-    cliente.from('alunos').select('interesse_id, segmento, turma, turno')
+    cliente.from('alunos').select('id, interesse_id, segmento, turma, turno, status_aluno'),
+    cliente.from('turmas').select('id, serie, nome_turma, segmento, turno, capacidade'),
+    cliente.from('alocacoes').select('id, turma_id')
   ]);
 
   if (!solics || !alunos) return;
 
-  // ---- KPIs ----
+  // ---- KPIs linha 1 ----
   const total          = solics.length;
-  const aprovados      = solics.filter(s => s.status === 'aprovado').length;
+  const aprovados      = solics.filter(s => s.status === 'aprovado' || s.status === 'matriculado').length;
   const taxa           = total > 0 ? Math.round((aprovados / total) * 100) : 0;
   const tickets        = solics.map(s => s.valor_mensalidade_anterior).filter(v => v > 0);
   const ticketMed      = tickets.length ? (tickets.reduce((a,b) => a+b, 0) / tickets.length) : 0;
@@ -1950,6 +2003,25 @@ async function carregarRelatorios() {
   document.getElementById('rel-kpi-ticket').textContent       = ticketMed > 0
     ? ticketMed.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
     : '–';
+
+  // ---- KPIs linha 2 ----
+  const matriculados  = solics.filter(s => s.status === 'matriculado').length;
+  const cancelados    = solics.filter(s => s.status === 'cancelado').length;
+  const reprovados    = solics.filter(s => s.status === 'reprovado').length;
+  const alocIds       = new Set((alocacoes || []).map(a => a.turma_id ? a : null).filter(Boolean).map(() => true));
+  const enturmados    = (alocacoes || []).length;
+  const alunosAprov   = alunos.filter(a => a.status_aluno === 'aprovado').length;
+  const aguardando    = Math.max(0, alunosAprov - enturmados);
+
+  document.getElementById('rel-kpi-matriculados').textContent = matriculados;
+  document.getElementById('rel-kpi-enturmados').textContent   = enturmados;
+  document.getElementById('rel-kpi-aguardando').textContent   = aguardando;
+  document.getElementById('rel-kpi-cancelados').textContent   = cancelados;
+  document.getElementById('rel-kpi-reprovados').textContent   = reprovados;
+
+  // Mapa turma_id → contagem de alocados
+  const alocPorTurma = {};
+  (alocacoes || []).forEach(a => { alocPorTurma[a.turma_id] = (alocPorTurma[a.turma_id] || 0) + 1; });
 
   // ---- helpers ----
   function contarCampo(arr, campo) {
@@ -1982,12 +2054,14 @@ async function carregarRelatorios() {
 
   // ---- Paletas ----
   const CORES_STATUS = {
-    pendente:   '#f59e0b',
-    em_analise: '#3b82f6',
-    aprovado:   '#22c55e',
-    reprovado:  '#ef4444'
+    pendente:    '#f59e0b',
+    em_analise:  '#3b82f6',
+    aprovado:    '#22c55e',
+    reprovado:   '#ef4444',
+    cancelado:   '#7c3aed',
+    matriculado: '#0e7490'
   };
-  const LABEL_STATUS = { pendente: 'Pendente', em_analise: 'Em Análise', aprovado: 'Aprovado', reprovado: 'Reprovado' };
+  const LABEL_STATUS = { pendente: 'Pendente', em_analise: 'Em Análise', aprovado: 'Aprovado', reprovado: 'Reprovado', cancelado: 'Cancelado', matriculado: 'Matriculado' };
 
   const PAL_BLUE   = ['#1e3a8a','#1e40af','#1d4ed8','#2563eb','#3b82f6','#60a5fa','#93c5fd','#bfdbfe','#dbeafe'];
   const PAL_GREEN  = ['#14532d','#166534','#15803d','#16a34a','#22c55e','#4ade80','#86efac','#bbf7d0'];
@@ -2098,7 +2172,35 @@ async function carregarRelatorios() {
     }
   });
 
-  // ---- 6. Motivos de saída (bar horizontal) ----
+  // ---- 6. Ocupação das turmas (bar agrupada: alocados vs capacidade) ----
+  _destroyChart('turmas');
+  const turmasFiltradas = (turmas || []).filter(t => t.capacidade > 0);
+  if (turmasFiltradas.length) {
+    const turmaLabels  = turmasFiltradas.map(t => `${t.serie} – ${t.nome_turma}`);
+    const turmaAloc    = turmasFiltradas.map(t => alocPorTurma[t.id] || 0);
+    const turmaLivre   = turmasFiltradas.map(t => Math.max(0, t.capacidade - (alocPorTurma[t.id] || 0)));
+    _charts['turmas'] = new Chart(document.getElementById('chart-turmas'), {
+      type: 'bar',
+      data: {
+        labels: turmaLabels,
+        datasets: [
+          { label: 'Enturmados', data: turmaAloc,  backgroundColor: '#22c55e', borderRadius: 4 },
+          { label: 'Vagas livres', data: turmaLivre, backgroundColor: '#e2e8f0', borderRadius: 4 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        indexAxis: turmasFiltradas.length > 6 ? 'y' : 'x',
+        plugins: { legend: { position: 'bottom', labels: { padding: 14, font: { size: 12 } } } },
+        scales: {
+          x: { stacked: true, grid: { display: false } },
+          y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f1f5f9' } }
+        }
+      }
+    });
+  }
+
+  // ---- 7. Motivos de saída (bar horizontal) ----
   _destroyChart('motivo-saida');
   const CHIPS_SAIDA = ['Localização / Proximidade','Qualidade de Ensino','Proposta Pedagógica','Infraestrutura','Clima Escolar','Custo-Benefício','Indicação de Amigos/Família','Mudança de Endereço','Metodologia de Ensino'];
   const saidaCount = contarMotivos(solics, 'motivo_transferencia', CHIPS_SAIDA);
@@ -2117,7 +2219,7 @@ async function carregarRelatorios() {
     }
   });
 
-  // ---- 7. Motivos escolha Plenus (bar horizontal) ----
+  // ---- 8. Motivos escolha Plenus (bar horizontal) ----
   _destroyChart('motivo-plenus');
   const CHIPS_PLENUS = ['Qualidade Pedagógica','Reputação da Escola','Indicação de Conhecidos','Infraestrutura','Projeto Pedagógico','Localização Favorável','Valores e Cultura da Escola','Atividades Extracurriculares','Clima Escolar'];
   const plenusCont = contarMotivos(solics, 'motivo_escolha_plenus', CHIPS_PLENUS);
