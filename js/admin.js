@@ -1827,11 +1827,13 @@ async function confirmarAlocacao() {
 
   btn.disabled = true; btn.innerHTML = '<span class="loading"></span> Salvando...';
 
+  const { data: { user } } = await cliente.auth.getUser();
+
   // Remove alocação anterior se existir
   await cliente.from('alocacoes').delete().eq('aluno_id', alunoAlocandoId);
 
   const { error } = await cliente.from('alocacoes').insert({
-    aluno_id: alunoAlocandoId, turma_id: turmaId
+    aluno_id: alunoAlocandoId, turma_id: turmaId, colaborador_id: user.id
   });
 
   btn.disabled = false; btn.innerHTML = '🏫 Confirmar Enturmar';
