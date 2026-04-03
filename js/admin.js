@@ -28,11 +28,12 @@ const PERMUTA_LABEL = {
 };
 
 const STATUS_LABEL = {
-  pendente:   'Pendente',
-  em_analise: 'Em Análise',
-  aprovado:   'Aprovado',
-  reprovado:  'Reprovado',
-  cancelado:  'Cancelado'
+  pendente:    'Pendente',
+  em_analise:  'Em Análise',
+  aprovado:    'Aprovado',
+  reprovado:   'Reprovado',
+  cancelado:   'Cancelado',
+  matriculado: 'Matriculado'
 };
 
 const CARGO_LABEL = {
@@ -78,11 +79,12 @@ const GUIAS = {
 };
 
 const FRASES_STATUS = {
-  aprovado:   'Aprovado. O aluno(a) será dirigido(a) para efetivação de matrícula.',
-  reprovado:  'Reprovado. Infelizmente a solicitação não pôde ser atendida no momento. Agradecemos o interesse no Colégio Plenus e ficamos à disposição para futuras oportunidades.',
-  em_analise: 'Solicitação em análise pela equipe pedagógica. Em breve entraremos em contato para dar continuidade ao processo de seleção.',
-  pendente:   'Solicitação recebida e registrada. Aguardando início da análise pela equipe do Colégio Plenus.',
-  cancelado:  'Solicitação cancelada. A vaga aprovada foi cancelada pela equipe do Colégio Plenus.'
+  aprovado:    'Aprovado. O aluno(a) será dirigido(a) para efetivação de matrícula.',
+  reprovado:   'Reprovado. Infelizmente a solicitação não pôde ser atendida no momento. Agradecemos o interesse no Colégio Plenus e ficamos à disposição para futuras oportunidades.',
+  em_analise:  'Solicitação em análise pela equipe pedagógica. Em breve entraremos em contato para dar continuidade ao processo de seleção.',
+  pendente:    'Solicitação recebida e registrada. Aguardando início da análise pela equipe do Colégio Plenus.',
+  cancelado:   'Solicitação cancelada. A vaga aprovada foi cancelada pela equipe do Colégio Plenus.',
+  matriculado: 'Matrícula confirmada! O(s) aluno(s) foi(ram) matriculado(s) e alocado(s) na(s) turma(s) conforme informado. Ressaltamos que, por necessidade de organização pedagógica, a turma poderá ser ajustada pela coordenação. Em qualquer alteração, o responsável será prontamente comunicado.'
 };
 
 let todasSolicitacoes  = [];
@@ -761,7 +763,7 @@ function renderSolicitacoes(lista) {
     const totalAlunos  = alunos.length;
     const aprov        = alunos.filter(a => (a.status_aluno || 'pendente') === 'aprovado').length;
     const reprov       = alunos.filter(a => (a.status_aluno || 'pendente') === 'reprovado').length;
-    const temRessalva  = s.status === 'aprovado' && totalAlunos > 0 && aprov < totalAlunos;
+    const temRessalva  = (s.status === 'aprovado' || s.status === 'matriculado') && totalAlunos > 0 && aprov < totalAlunos;
     const badgeLabel   = temRessalva ? 'Aprovado com ressalvas' : STATUS_LABEL[s.status];
 
     const alunosTags = alunos.map(a => {
@@ -845,7 +847,7 @@ function abrirDetalhe(id) {
   const totalAlunos = alunos.length;
   const aprov       = alunos.filter(a => (a.status_aluno || 'pendente') === 'aprovado').length;
   const reprov      = alunos.filter(a => (a.status_aluno || 'pendente') === 'reprovado').length;
-  const temRessalva = s.status === 'aprovado' && totalAlunos > 0 && aprov < totalAlunos;
+  const temRessalva = (s.status === 'aprovado' || s.status === 'matriculado') && totalAlunos > 0 && aprov < totalAlunos;
   const badgeLabel  = temRessalva ? 'Aprovado com ressalvas' : STATUS_LABEL[s.status];
 
   document.getElementById('modal-content').innerHTML = `
@@ -1124,7 +1126,7 @@ async function atualizarStatusGeral(interesseId) {
   const todosAprovados = statuses.every(st => st === 'aprovado');
 
   if (!todosAprovados) return; // só age se todos aprovados
-  if (s.status === 'aprovado') return; // já está aprovado
+  if (s.status === 'aprovado' || s.status === 'matriculado') return; // já está aprovado/matriculado
 
   const { error } = await cliente.from('interesse_vagas')
     .update({ status: 'aprovado' }).eq('id', interesseId);
@@ -1218,14 +1220,18 @@ function gerarBotoesStatus(status, id) {
       { s: 'aprovado',   label: '✅ Aprovar',    cls: 'btn-success'   },
       { s: 'reprovado',  label: '✕ Reprovar',   cls: 'btn-danger'    }
     ],
-    aprovado:   [
-      { s: 'cancelado',  label: '🚫 Cancelar',  cls: 'btn-danger'    }
+    aprovado:    [
+      { s: 'matriculado', label: '🎓 Matricular', cls: 'btn-primary'   },
+      { s: 'cancelado',   label: '🚫 Cancelar',   cls: 'btn-danger'    }
     ],
-    reprovado:  [
-      { s: 'pendente',   label: '↩ Pendente',   cls: 'btn-secondary' }
+    matriculado: [
+      { s: 'cancelado',   label: '🚫 Cancelar',   cls: 'btn-danger'    }
     ],
-    cancelado:  [
-      { s: 'pendente',   label: '↩ Reabrir',    cls: 'btn-secondary' }
+    reprovado:   [
+      { s: 'pendente',    label: '↩ Pendente',    cls: 'btn-secondary' }
+    ],
+    cancelado:   [
+      { s: 'pendente',    label: '↩ Reabrir',     cls: 'btn-secondary' }
     ]
   };
   return (acoes[status] || [])
@@ -1273,11 +1279,12 @@ function fecharGuiaModalClick(event) {
 //  MODAL UNIFICADO: CONFIRMAÇÃO DE STATUS + NOTA
 // ============================================================
 const ACAO_CONFIG = {
-  aprovado:   { titulo: '✅ Aprovar solicitação',       cor: '#15803d', bg: '#dcfce7', border: '#bbf7d0', texto: 'Ao confirmar, o status será alterado para Aprovado e a nota abaixo será registrada no histórico.' },
-  reprovado:  { titulo: '✕ Reprovar solicitação',      cor: '#dc2626', bg: '#fee2e2', border: '#fecaca', texto: 'Ao confirmar, o status será alterado para Reprovado e a nota abaixo será registrada no histórico.' },
-  em_analise: { titulo: '🔍 Colocar em Análise',       cor: '#1e40af', bg: '#eff6ff', border: '#bfdbfe', texto: 'Ao confirmar, o status será alterado para Em Análise e a nota abaixo será registrada no histórico.' },
-  pendente:   { titulo: '↩ Voltar para Pendente',      cor: '#b45309', bg: '#fef3c7', border: '#fde68a', texto: 'Ao confirmar, o status será alterado para Pendente e a nota abaixo será registrada no histórico.' },
-  cancelado:  { titulo: '🚫 Cancelar solicitação',     cor: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', texto: 'Atenção: esta ação cancela uma solicitação já aprovada. A nota abaixo será registrada no histórico.' }
+  aprovado:    { titulo: '✅ Aprovar solicitação',        cor: '#15803d', bg: '#dcfce7', border: '#bbf7d0', texto: 'Ao confirmar, o status será alterado para Aprovado e a nota abaixo será registrada no histórico.' },
+  reprovado:   { titulo: '✕ Reprovar solicitação',       cor: '#dc2626', bg: '#fee2e2', border: '#fecaca', texto: 'Ao confirmar, o status será alterado para Reprovado e a nota abaixo será registrada no histórico.' },
+  em_analise:  { titulo: '🔍 Colocar em Análise',        cor: '#1e40af', bg: '#eff6ff', border: '#bfdbfe', texto: 'Ao confirmar, o status será alterado para Em Análise e a nota abaixo será registrada no histórico.' },
+  pendente:    { titulo: '↩ Voltar para Pendente',       cor: '#b45309', bg: '#fef3c7', border: '#fde68a', texto: 'Ao confirmar, o status será alterado para Pendente e a nota abaixo será registrada no histórico.' },
+  cancelado:   { titulo: '🚫 Cancelar solicitação',      cor: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', texto: 'Atenção: esta ação cancela uma solicitação já aprovada. A nota abaixo será registrada no histórico.' },
+  matriculado: { titulo: '🎓 Confirmar Matrícula',       cor: '#0e7490', bg: '#ecfeff', border: '#a5f3fc', texto: 'Ao confirmar, a matrícula será registrada. O responsável será informado sobre a turma e a possibilidade de ajuste pedagógico.' }
 };
 
 function confirmarStatus(id, novoStatus) {
@@ -1299,10 +1306,27 @@ function confirmarStatus(id, novoStatus) {
   alerta.style.border     = `1px solid ${cfg.border}`;
   alerta.style.color      = cfg.cor;
 
-  document.getElementById('acao-modal-textarea').value = FRASES_STATUS[novoStatus] || '';
+  // Para matriculado: pré-preencher com turmas dos alunos enturmados
+  if (novoStatus === 'matriculado') {
+    const sol = todasSolicitacoes.find(s => s.id === id);
+    const alunos = sol?.alunos || [];
+    const linhasTurmas = alunos
+      .filter(a => a.alocacoes?.[0]?.turmas)
+      .map(a => {
+        const t = a.alocacoes[0].turmas;
+        return `• ${a.nome_aluno}: ${t.serie} – ${t.nome_turma} (${TURNO_LABEL_FULL[t.turno] || t.turno})`;
+      });
+    const listaAlunos = linhasTurmas.length
+      ? '\n\nAluno(s) e turma(s):\n' + linhasTurmas.join('\n')
+      : '';
+    document.getElementById('acao-modal-textarea').value =
+      FRASES_STATUS['matriculado'] + listaAlunos;
+  } else {
+    document.getElementById('acao-modal-textarea').value = FRASES_STATUS[novoStatus] || '';
+  }
 
   const btnConfirmar = document.getElementById('btn-confirmar-acao');
-  btnConfirmar.className = `btn btn-sm ${(novoStatus === 'reprovado' || novoStatus === 'cancelado') ? 'btn-danger' : 'btn-secondary'}`;
+  btnConfirmar.className = `btn btn-sm ${(novoStatus === 'reprovado' || novoStatus === 'cancelado') ? 'btn-danger' : novoStatus === 'matriculado' ? 'btn-primary' : 'btn-secondary'}`;
   btnConfirmar.onclick = () => executarAtualizacaoStatus(id, novoStatus);
 
   document.getElementById('acao-modal-overlay').classList.add('active');

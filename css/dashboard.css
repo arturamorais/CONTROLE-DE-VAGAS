@@ -860,7 +860,8 @@ button { cursor: pointer; font-family: inherit; }
 .status-em_analise { background: #eff6ff; color: var(--blue-dark); border: 1px solid #bfdbfe; }
 .status-aprovado   { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
 .status-reprovado  { background: #fee2e2; color: var(--red-dark); border: 1px solid #fecaca; }
-.status-cancelado  { background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+.status-cancelado   { background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+.status-matriculado { background: #ecfeff; color: #0e7490; border: 1px solid #a5f3fc; }
 
 /* ============================================================
    EMPTY STATE
