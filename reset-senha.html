@@ -166,17 +166,25 @@ function setState(id) {
   });
 }
 
-// O Supabase injeta o token na hash (#) ou como query param após o redirect
-window.addEventListener('load', async () => {
-  // Tenta obter a sessão — o SDK do Supabase processa o hash automaticamente
-  const { data: { session }, error } = await cliente.auth.getSession();
+// Supabase v2: o token de recuperação chega na hash (#access_token=...&type=recovery)
+// O SDK dispara onAuthStateChange com evento PASSWORD_RECOVERY ao processar o hash.
+window.addEventListener('load', () => {
+  // Timeout de segurança: se após 5s nenhum evento chegar, o link é inválido
+  const timeout = setTimeout(() => setState('state-invalido'), 5000);
 
-  if (error || !session) {
-    setState('state-invalido');
-    return;
-  }
-
-  setState('state-form');
+  cliente.auth.onAuthStateChange((event, session) => {
+    if (event === 'PASSWORD_RECOVERY' && session) {
+      clearTimeout(timeout);
+      setState('state-form');
+    } else if (event === 'SIGNED_IN' && session) {
+      // Alguns fluxos disparam SIGNED_IN em vez de PASSWORD_RECOVERY
+      clearTimeout(timeout);
+      setState('state-form');
+    } else if (event === 'SIGNED_OUT' || (!session && event !== 'INITIAL_SESSION')) {
+      clearTimeout(timeout);
+      setState('state-invalido');
+    }
+  });
 });
 
 function avaliarSenha() {
