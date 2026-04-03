@@ -31,7 +31,8 @@ const STATUS_LABEL = {
   pendente:   'Pendente',
   em_analise: 'Em Análise',
   aprovado:   'Aprovado',
-  reprovado:  'Reprovado'
+  reprovado:  'Reprovado',
+  cancelado:  'Cancelado'
 };
 
 const CARGO_LABEL = {
@@ -80,7 +81,8 @@ const FRASES_STATUS = {
   aprovado:   'Aprovado. O aluno(a) será dirigido(a) para efetivação de matrícula.',
   reprovado:  'Reprovado. Infelizmente a solicitação não pôde ser atendida no momento. Agradecemos o interesse no Colégio Plenus e ficamos à disposição para futuras oportunidades.',
   em_analise: 'Solicitação em análise pela equipe pedagógica. Em breve entraremos em contato para dar continuidade ao processo de seleção.',
-  pendente:   'Solicitação recebida e registrada. Aguardando início da análise pela equipe do Colégio Plenus.'
+  pendente:   'Solicitação recebida e registrada. Aguardando início da análise pela equipe do Colégio Plenus.',
+  cancelado:  'Solicitação cancelada. A vaga aprovada foi cancelada pela equipe do Colégio Plenus.'
 };
 
 let todasSolicitacoes  = [];
@@ -1187,8 +1189,7 @@ function gerarBotoesStatus(status, id) {
   const acoes = {
     pendente:   [
       { s: 'em_analise', label: '🔍 Em Análise', cls: 'btn-secondary' },
-      { s: 'aprovado',   label: '✅ Aprovar',    cls: 'btn-success'   },
-      { s: 'reprovado',  label: '✕ Reprovar',   cls: 'btn-danger'    }
+      { s: 'aprovado',   label: '✅ Aprovar',    cls: 'btn-success'   }
     ],
     em_analise: [
       { s: 'pendente',   label: '↩ Pendente',   cls: 'btn-secondary' },
@@ -1196,12 +1197,13 @@ function gerarBotoesStatus(status, id) {
       { s: 'reprovado',  label: '✕ Reprovar',   cls: 'btn-danger'    }
     ],
     aprovado:   [
-      { s: 'pendente',   label: '↩ Pendente',   cls: 'btn-secondary' },
-      { s: 'reprovado',  label: '✕ Reprovar',   cls: 'btn-danger'    }
+      { s: 'cancelado',  label: '🚫 Cancelar',  cls: 'btn-danger'    }
     ],
     reprovado:  [
-      { s: 'pendente',   label: '↩ Pendente',   cls: 'btn-secondary' },
-      { s: 'aprovado',   label: '✅ Aprovar',    cls: 'btn-success'   }
+      { s: 'pendente',   label: '↩ Pendente',   cls: 'btn-secondary' }
+    ],
+    cancelado:  [
+      { s: 'pendente',   label: '↩ Reabrir',    cls: 'btn-secondary' }
     ]
   };
   return (acoes[status] || [])
@@ -1249,10 +1251,11 @@ function fecharGuiaModalClick(event) {
 //  MODAL UNIFICADO: CONFIRMAÇÃO DE STATUS + NOTA
 // ============================================================
 const ACAO_CONFIG = {
-  aprovado:   { titulo: '✅ Aprovar solicitação',   cor: '#15803d', bg: '#dcfce7', border: '#bbf7d0', texto: 'Ao confirmar, o status será alterado para Aprovado e a nota abaixo será registrada no histórico.' },
-  reprovado:  { titulo: '✕ Reprovar solicitação',  cor: '#dc2626', bg: '#fee2e2', border: '#fecaca', texto: 'Ao confirmar, o status será alterado para Reprovado e a nota abaixo será registrada no histórico.' },
-  em_analise: { titulo: '🔍 Colocar em Análise',   cor: '#1e40af', bg: '#eff6ff', border: '#bfdbfe', texto: 'Ao confirmar, o status será alterado para Em Análise e a nota abaixo será registrada no histórico.' },
-  pendente:   { titulo: '↩ Voltar para Pendente',  cor: '#b45309', bg: '#fef3c7', border: '#fde68a', texto: 'Ao confirmar, o status será alterado para Pendente e a nota abaixo será registrada no histórico.' }
+  aprovado:   { titulo: '✅ Aprovar solicitação',       cor: '#15803d', bg: '#dcfce7', border: '#bbf7d0', texto: 'Ao confirmar, o status será alterado para Aprovado e a nota abaixo será registrada no histórico.' },
+  reprovado:  { titulo: '✕ Reprovar solicitação',      cor: '#dc2626', bg: '#fee2e2', border: '#fecaca', texto: 'Ao confirmar, o status será alterado para Reprovado e a nota abaixo será registrada no histórico.' },
+  em_analise: { titulo: '🔍 Colocar em Análise',       cor: '#1e40af', bg: '#eff6ff', border: '#bfdbfe', texto: 'Ao confirmar, o status será alterado para Em Análise e a nota abaixo será registrada no histórico.' },
+  pendente:   { titulo: '↩ Voltar para Pendente',      cor: '#b45309', bg: '#fef3c7', border: '#fde68a', texto: 'Ao confirmar, o status será alterado para Pendente e a nota abaixo será registrada no histórico.' },
+  cancelado:  { titulo: '🚫 Cancelar solicitação',     cor: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', texto: 'Atenção: esta ação cancela uma solicitação já aprovada. A nota abaixo será registrada no histórico.' }
 };
 
 function confirmarStatus(id, novoStatus) {
@@ -1277,7 +1280,7 @@ function confirmarStatus(id, novoStatus) {
   document.getElementById('acao-modal-textarea').value = FRASES_STATUS[novoStatus] || '';
 
   const btnConfirmar = document.getElementById('btn-confirmar-acao');
-  btnConfirmar.className = `btn btn-sm ${novoStatus === 'reprovado' ? 'btn-danger' : 'btn-secondary'}`;
+  btnConfirmar.className = `btn btn-sm ${(novoStatus === 'reprovado' || novoStatus === 'cancelado') ? 'btn-danger' : 'btn-secondary'}`;
   btnConfirmar.onclick = () => executarAtualizacaoStatus(id, novoStatus);
 
   document.getElementById('acao-modal-overlay').classList.add('active');
