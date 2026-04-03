@@ -1586,7 +1586,8 @@ function renderTurmas() {
                 ? `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;border-bottom:1px solid var(--gray-light)">
                      <span style="font-size:0.7rem;font-weight:700;color:var(--gray);width:18px;text-align:right;flex-shrink:0">${i+1}.</span>
                      <span style="font-size:0.8rem;font-weight:600;color:var(--navy-mid);flex:1">${escapeHtml(al.nome_aluno)}</span>
-                     <span style="font-size:0.7rem;color:var(--gray-dark)">${al.turma || ''}</span>
+                     <span style="font-size:0.7rem;color:var(--gray-dark);margin-right:0.25rem">${al.turma || ''}</span>
+                     <button class="btn btn-danger btn-sm btn-icon" title="Remover da turma" onclick="removerAlunoDaTurma('${al.id}','${aloc.id}','${escapeHtml(al.nome_aluno)}','${escapeHtml(t.serie)} – ${escapeHtml(t.nome_turma)}')">✕</button>
                    </div>`
                 : '';
             }).join('')
@@ -1687,12 +1688,48 @@ async function salvarTurma() {
 async function excluirTurma(id) {
   const turma = todasTurmas.find(t => t.id === id);
   if ((turma?.alocacoes?.length || 0) > 0) {
-    showToast('❌ Não é possível excluir uma turma com alunos alocados.');
+    Swal.fire({
+      title: 'Turma com alunos',
+      text: 'Não é possível excluir uma turma que possui alunos alocados. Remova os alunos primeiro.',
+      icon: 'warning',
+      confirmButtonColor: '#f97316'
+    });
     return;
   }
+  const { isConfirmed } = await Swal.fire({
+    title: 'Excluir turma?',
+    html: `<span style="font-size:0.875rem">A turma <strong>${escapeHtml(turma?.serie || '')} – ${escapeHtml(turma?.nome_turma || '')}</strong> será removida permanentemente.</span>`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Sim, excluir',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#ef4444',
+    reverseButtons: true
+  });
+  if (!isConfirmed) return;
   const { error } = await cliente.from('turmas').delete().eq('id', id);
   if (error) { showToast('❌ Erro: ' + error.message); return; }
   showToast('✅ Turma excluída.');
+  await carregarEnturmar();
+}
+
+async function removerAlunoDaTurma(alunoId, alocacaoId, nomeAluno, nomeTurma) {
+  const { isConfirmed } = await Swal.fire({
+    title: 'Remover aluno da turma?',
+    html: `<span style="font-size:0.875rem"><strong>${escapeHtml(nomeAluno)}</strong> será removido de <strong>${escapeHtml(nomeTurma)}</strong> e voltará para a lista de aguardando enturmação.</span>`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Sim, remover',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#ef4444',
+    reverseButtons: true
+  });
+  if (!isConfirmed) return;
+  const { error } = await cliente.from('alocacoes').delete().eq('id', alocacaoId);
+  if (error) { showToast('❌ Erro: ' + error.message); return; }
+  await registrarLog('remover_alocacao', 'alocacoes', alunoId, `Aluno "${nomeAluno}" removido de ${nomeTurma}`);
+  showToast(`✅ ${nomeAluno} removido da turma.`);
+  await carregarAlocacao();
   await carregarEnturmar();
 }
 
@@ -1849,6 +1886,9 @@ async function confirmarAlocacao() {
   showToast(`✅ Aluno enturmado com sucesso!`);
   await carregarAlocacao();
   await carregarEnturmar();
+  // Após enturmar, mostrar apenas quem ainda aguarda alocação
+  document.getElementById('filtro-alocado').value = 'nao';
+  renderAlocacao();
 }
 
 async function removerAlocacao(alunoId, alocacaoId) {
