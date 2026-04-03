@@ -1,6 +1,8 @@
 /* ============================================================
-   COLÉGIO PLENUS – Estilo Login / Cadastro
+   COLÉGIO PLENUS – Estilo Login / Cadastro  •  v2
    ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
 :root {
   --navy:        #0a0f1e;

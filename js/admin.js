@@ -86,6 +86,7 @@ const FRASES_STATUS = {
 let todasSolicitacoes  = [];
 let solicitacaoAtualId = null;
 let obsEditandoId      = null;
+let cargoAtual         = null;
 
 // ============================================================
 //  LOGGING
@@ -124,6 +125,7 @@ async function init() {
     return;
   }
 
+  cargoAtual = colab.cargo;
   const cargo = CARGO_LABEL[colab.cargo] || colab.cargo;
   document.getElementById('sidebar-nome').textContent    = colab.nome;
   document.getElementById('sidebar-email').textContent   = user.email;
@@ -133,8 +135,14 @@ async function init() {
   document.getElementById('profile-cargo-display').textContent = cargo;
   document.getElementById('perfil-nome').value           = colab.nome;
 
+  if (colab.cargo === 'admin') {
+    document.getElementById('nav-colaboradores').style.display = '';
+    document.getElementById('nav-dados').style.display = '';
+  }
+
   await carregarStats();
   await carregarUltimasSolicitacoes();
+  verificarNotificacoesPendentes();
 }
 
 // ============================================================
@@ -147,6 +155,386 @@ async function logout() {
 }
 
 // ============================================================
+//  GERENCIAR DADOS (exclusão)
+// ============================================================
+let todasSolicitacoesDados = [];
+let selecionadosDados      = new Set();
+
+async function carregarDados() {
+  const container = document.getElementById('dados-lista');
+  container.innerHTML = `<div class="empty-state" style="padding:1.5rem"><span class="empty-icon">⏳</span><p>Carregando...</p></div>`;
+  selecionadosDados.clear();
+  atualizarBtnExcluir();
+
+  const { data: solicitacoes } = await cliente
+    .from('interesse_vagas')
+    .select('id, status, created_at, usuario_id, alunos(nome_aluno)')
+    .order('created_at', { ascending: false });
+
+  const ids = [...new Set((solicitacoes || []).map(s => s.usuario_id))];
+  const { data: perfis } = ids.length
+    ? await cliente.from('usuarios').select('id, nome, email').in('id', ids)
+    : { data: [] };
+  const pm = Object.fromEntries((perfis || []).map(p => [p.id, p]));
+
+  todasSolicitacoesDados = (solicitacoes || []).map(s => ({
+    ...s, responsavel: pm[s.usuario_id] || {}
+  }));
+
+  filtrarDados();
+}
+
+function filtrarDados() {
+  const busca = document.getElementById('dados-busca').value.toLowerCase().trim();
+  const lista = busca
+    ? todasSolicitacoesDados.filter(s => {
+        const r = s.responsavel;
+        return [r.nome, r.email, ...(s.alunos || []).map(a => a.nome_aluno)]
+          .join(' ').toLowerCase().includes(busca);
+      })
+    : todasSolicitacoesDados;
+
+  document.getElementById('dados-count').textContent =
+    `${lista.length} solicitaç${lista.length !== 1 ? 'ões' : 'ão'}`;
+
+  renderDados(lista);
+}
+
+function renderDados(lista) {
+  const container = document.getElementById('dados-lista');
+  if (!lista.length) {
+    container.innerHTML = `<div class="empty-state" style="padding:1.5rem"><span class="empty-icon">📭</span><p>Nenhuma solicitação encontrada.</p></div>`;
+    return;
+  }
+
+  container.innerHTML = lista.map(s => {
+    const r       = s.responsavel;
+    const alunos  = (s.alunos || []).map(a => a.nome_aluno).join(', ') || '–';
+    const data    = new Date(s.created_at).toLocaleDateString('pt-BR');
+    const checked = selecionadosDados.has(s.id) ? 'checked' : '';
+    return `
+      <div style="display:flex;align-items:center;gap:0.875rem;padding:0.75rem 0;border-bottom:1px solid var(--gray-light)">
+        <input type="checkbox" ${checked} onchange="toggleSelecionado('${s.id}', this.checked)"
+          style="width:16px;height:16px;cursor:pointer;accent-color:var(--orange)">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:0.85rem;font-weight:600">${escapeHtml(r.nome || '–')}</div>
+          <div style="font-size:0.775rem;color:var(--gray-dark)">${escapeHtml(alunos)}</div>
+          <div style="font-size:0.73rem;color:var(--gray)">${data} · ${escapeHtml(r.email || '–')}</div>
+        </div>
+        <span class="status-badge status-${s.status}" style="font-size:0.72rem;flex-shrink:0">${STATUS_LABEL[s.status]}</span>
+        <button class="btn btn-danger btn-sm" style="flex-shrink:0" onclick="excluirSolicitacao('${s.id}')">🗑️</button>
+      </div>`;
+  }).join('');
+}
+
+function toggleSelecionado(id, checked) {
+  if (checked) selecionadosDados.add(id);
+  else selecionadosDados.delete(id);
+  atualizarBtnExcluir();
+}
+
+function atualizarBtnExcluir() {
+  const btn = document.getElementById('btn-excluir-selecionados');
+  if (!btn) return;
+  const n = selecionadosDados.size;
+  btn.style.display = n > 0 ? '' : 'none';
+  btn.textContent = `🗑️ Excluir ${n} selecionado${n !== 1 ? 's' : ''}`;
+}
+
+async function excluirSolicitacao(id) {
+  const sol = todasSolicitacoesDados.find(s => s.id === id);
+  const nome = sol?.responsavel?.nome || 'esta solicitação';
+
+  const ok = await Swal.fire({
+    title: 'Excluir solicitação?',
+    html: `<span style="font-size:0.875rem">Todos os dados de <strong>${escapeHtml(nome)}</strong> serão removidos permanentemente.</span>`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Sim, excluir',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#ef4444'
+  });
+  if (!ok.isConfirmed) return;
+
+  await _deletarSolicitacao(id);
+  todasSolicitacoesDados = todasSolicitacoesDados.filter(s => s.id !== id);
+  selecionadosDados.delete(id);
+  atualizarBtnExcluir();
+  filtrarDados();
+  showToast('✅ Solicitação excluída.');
+}
+
+async function excluirSelecionados() {
+  const n = selecionadosDados.size;
+  if (!n) return;
+
+  const ok = await Swal.fire({
+    title: `Excluir ${n} solicitaç${n !== 1 ? 'ões' : 'ão'}?`,
+    html: `<span style="font-size:0.875rem">Esta ação é <strong>irreversível</strong>.</span>`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Sim, excluir tudo',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#ef4444'
+  });
+  if (!ok.isConfirmed) return;
+
+  for (const id of [...selecionadosDados]) {
+    await _deletarSolicitacao(id);
+  }
+
+  todasSolicitacoesDados = todasSolicitacoesDados.filter(s => !selecionadosDados.has(s.id));
+  selecionadosDados.clear();
+  atualizarBtnExcluir();
+  filtrarDados();
+  showToast(`✅ ${n} solicitaç${n !== 1 ? 'ões excluídas' : 'ão excluída'}.`);
+}
+
+async function _deletarSolicitacao(id) {
+  // Busca ids dos alunos para deletar alocações primeiro
+  const { data: alunos } = await cliente.from('alunos').select('id').eq('interesse_id', id);
+  const alunoIds = (alunos || []).map(a => a.id);
+  if (alunoIds.length) {
+    await cliente.from('alocacoes').delete().in('aluno_id', alunoIds);
+  }
+  await cliente.from('historico_solicitacoes').delete().eq('interesse_id', id);
+  await cliente.from('alunos').delete().eq('interesse_id', id);
+  await cliente.from('interesse_vagas').delete().eq('id', id);
+}
+
+async function limparLogs() {
+  const ok = await Swal.fire({
+    title: 'Limpar todos os logs?',
+    html: `<span style="font-size:0.875rem">Todo o histórico de atividade será removido. Esta ação é <strong>irreversível</strong>.</span>`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Sim, limpar',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#ef4444'
+  });
+  if (!ok.isConfirmed) return;
+
+  const { error } = await cliente.from('logs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  if (error) { showToast('❌ Erro: ' + error.message); return; }
+  showToast('✅ Logs limpos.');
+}
+
+async function limparHistorico() {
+  const ok = await Swal.fire({
+    title: 'Limpar todo o histórico?',
+    html: `<span style="font-size:0.875rem">Todas as notas e registros de status de todas as solicitações serão removidos. <strong>Irreversível</strong>.</span>`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Sim, limpar',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#ef4444'
+  });
+  if (!ok.isConfirmed) return;
+
+  const { error } = await cliente.from('historico_solicitacoes').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  if (error) { showToast('❌ Erro: ' + error.message); return; }
+  showToast('✅ Histórico limpo.');
+}
+
+// ============================================================
+//  NOTIFICAÇÃO DE PENDENTES
+// ============================================================
+async function verificarNotificacoesPendentes() {
+  const { data } = await cliente
+    .from('interesse_vagas')
+    .select('status')
+    .in('status', ['pendente', 'em_analise']);
+
+  if (!data || data.length === 0) return;
+
+  const pendentes = data.filter(d => d.status === 'pendente').length;
+  const analise   = data.filter(d => d.status === 'em_analise').length;
+
+  let partes = [];
+  if (pendentes > 0) partes.push(`<strong>${pendentes}</strong> pendente${pendentes !== 1 ? 's' : ''}`);
+  if (analise   > 0) partes.push(`<strong>${analise}</strong> em análise`);
+
+  document.getElementById('notif-modal-texto').innerHTML =
+    `Existem ${partes.join(' e ')} aguardando sua atenção.`;
+  document.getElementById('notif-modal-overlay').classList.add('active');
+}
+
+function fecharNotifModal() {
+  document.getElementById('notif-modal-overlay').classList.remove('active');
+}
+
+// ============================================================
+//  COLABORADORES
+// ============================================================
+async function carregarColaboradores() {
+  const container = document.getElementById('colaboradores-lista');
+  container.innerHTML = `<div class="empty-state" style="padding:1.5rem"><span class="empty-icon">⏳</span><p>Carregando...</p></div>`;
+
+  const { data: lista, error } = await cliente
+    .from('colaboradores')
+    .select('id, nome, cargo, ativo')
+    .order('nome');
+
+  if (error) {
+    container.innerHTML = `<div class="alert alert-error">Erro ao carregar colaboradores.</div>`;
+    return;
+  }
+
+  // Buscar emails via tabela usuarios
+  const ids = (lista || []).map(c => c.id);
+  const { data: usuarios } = ids.length
+    ? await cliente.from('usuarios').select('id, email').in('id', ids)
+    : { data: [] };
+  const emailMap = Object.fromEntries((usuarios || []).map(u => [u.id, u.email]));
+
+  if (!lista?.length) {
+    container.innerHTML = `<div class="empty-state" style="padding:1.5rem"><span class="empty-icon">👥</span><p>Nenhum colaborador cadastrado.</p></div>`;
+    return;
+  }
+
+  const isAdmin = cargoAtual === 'admin';
+
+  container.innerHTML = lista.map(c => {
+    const email    = emailMap[c.id] || '—';
+    const cargoLbl = CARGO_LABEL[c.cargo] || c.cargo;
+    const ativoClr = c.ativo ? '#22c55e' : '#94a3b8';
+    const ativoTxt = c.ativo ? 'Ativo' : 'Inativo';
+
+    const controles = isAdmin ? `
+      <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
+        <select style="font-size:0.78rem;padding:0.3rem 0.5rem;border:1px solid var(--gray-light);border-radius:0.5rem;background:var(--white);color:var(--navy-mid)"
+          onchange="alterarCargoColaborador('${c.id}', this.value)">
+          <option value="colaborador" ${c.cargo === 'colaborador' ? 'selected' : ''}>Colaborador</option>
+          <option value="admin"       ${c.cargo === 'admin'       ? 'selected' : ''}>Administrador</option>
+        </select>
+        <button class="btn btn-sm" style="font-size:0.78rem;padding:0.3rem 0.75rem;background:${c.ativo ? '#fee2e2' : '#dcfce7'};color:${c.ativo ? '#b91c1c' : '#15803d'};border:1px solid ${c.ativo ? '#fca5a5' : '#86efac'};border-radius:0.5rem"
+          onclick="toggleColaboradorAtivo('${c.id}', ${c.ativo})">
+          ${c.ativo ? '🔴 Desativar' : '🟢 Ativar'}
+        </button>
+      </div>` : '';
+
+    return `
+      <div style="display:flex;align-items:center;padding:0.875rem 0;border-bottom:1px solid var(--gray-light);gap:1rem;flex-wrap:wrap">
+        <div style="flex:1;min-width:150px">
+          <div style="font-weight:600;font-size:0.875rem">${c.nome}</div>
+          <div style="font-size:0.78rem;color:var(--gray-dark)">${email}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.4rem;font-size:0.78rem;color:${ativoClr};font-weight:600">
+          <span style="width:8px;height:8px;border-radius:50%;background:${ativoClr};display:inline-block"></span>
+          ${ativoTxt}
+        </div>
+        <span class="status-badge" style="font-size:0.72rem">${cargoLbl}</span>
+        ${controles}
+      </div>`;
+  }).join('');
+}
+
+function abrirModalAdicionarColaborador() {
+  document.getElementById('colab-email-input').value   = '';
+  document.getElementById('colab-cargo-select').value  = 'colaborador';
+  document.getElementById('colab-modal-alert').innerHTML = '';
+  document.getElementById('colab-modal-overlay').classList.add('active');
+}
+
+function fecharColabModal() {
+  document.getElementById('colab-modal-overlay').classList.remove('active');
+}
+
+function fecharColabModalClick(e) {
+  if (e.target === document.getElementById('colab-modal-overlay')) fecharColabModal();
+}
+
+async function salvarNovoColaborador() {
+  const email = document.getElementById('colab-email-input').value.trim().toLowerCase();
+  const cargo = document.getElementById('colab-cargo-select').value;
+  const alert = document.getElementById('colab-modal-alert');
+  const btn   = document.getElementById('btn-salvar-colab');
+
+  alert.innerHTML = '';
+  if (!email) {
+    alert.innerHTML = `<div class="alert alert-error">Informe o e-mail do usuário.</div>`;
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Buscando...';
+
+  const { data: usuario } = await cliente
+    .from('usuarios')
+    .select('id, nome')
+    .eq('email', email)
+    .single();
+
+  if (!usuario) {
+    alert.innerHTML = `<div class="alert alert-error">Usuário não encontrado. O usuário precisa se cadastrar no sistema primeiro.</div>`;
+    btn.disabled = false;
+    btn.innerHTML = '➕ Adicionar';
+    return;
+  }
+
+  // Verificar se já é colaborador
+  const { data: jaExiste } = await cliente
+    .from('colaboradores')
+    .select('id, ativo')
+    .eq('id', usuario.id)
+    .single();
+
+  if (jaExiste) {
+    alert.innerHTML = `<div class="alert alert-error">Este usuário já é um colaborador.</div>`;
+    btn.disabled = false;
+    btn.innerHTML = '➕ Adicionar';
+    return;
+  }
+
+  const { error } = await cliente.from('colaboradores').insert({
+    id:    usuario.id,
+    nome:  usuario.nome,
+    cargo,
+    ativo: true
+  });
+
+  if (error) {
+    alert.innerHTML = `<div class="alert alert-error">Erro ao adicionar: ${error.message}</div>`;
+    btn.disabled = false;
+    btn.innerHTML = '➕ Adicionar';
+    return;
+  }
+
+  await registrarLog('adicionar_colaborador', 'colaboradores', usuario.id,
+    `Colaborador ${usuario.nome} (${email}) adicionado com cargo ${CARGO_LABEL[cargo]}`);
+
+  fecharColabModal();
+  showToast('✅ Colaborador adicionado com sucesso!');
+  carregarColaboradores();
+}
+
+async function toggleColaboradorAtivo(id, ativoAtual) {
+  const novoAtivo = !ativoAtual;
+  const { error } = await cliente
+    .from('colaboradores')
+    .update({ ativo: novoAtivo })
+    .eq('id', id);
+
+  if (error) { showToast('❌ Erro ao atualizar status.'); return; }
+
+  showToast(novoAtivo ? '✅ Colaborador ativado.' : '✅ Colaborador desativado.');
+  carregarColaboradores();
+}
+
+async function alterarCargoColaborador(id, novoCargo) {
+  const { error } = await cliente
+    .from('colaboradores')
+    .update({ cargo: novoCargo })
+    .eq('id', id);
+
+  if (error) { showToast('❌ Erro ao alterar cargo.'); return; }
+
+  showToast('✅ Cargo atualizado.');
+  await registrarLog('alterar_cargo_colaborador', 'colaboradores', id,
+    `Cargo alterado para ${CARGO_LABEL[novoCargo]}`);
+}
+
+// ============================================================
 //  NAVEGAÇÃO
 // ============================================================
 function showSection(name) {
@@ -156,18 +544,22 @@ function showSection(name) {
   const nav = document.querySelector(`[data-section="${name}"]`);
   if (nav) nav.classList.add('active');
   const titles = {
-    'overview':     'Início',
-    'solicitacoes': 'Gestão',
-    'enturmar':     'Enturmar',
-    'relatorios':   'Relatórios',
-    'logs':         'Atividade',
-    'perfil':       'Meu Perfil'
+    'overview':       'Início',
+    'solicitacoes':   'Gestão',
+    'enturmar':       'Enturmar',
+    'relatorios':     'Relatórios',
+    'logs':           'Atividade',
+    'colaboradores':  'Colaboradores',
+    'dados':          'Gerenciar Dados',
+    'perfil':         'Meu Perfil'
   };
   document.querySelector('.topbar-title').textContent = titles[name] || '';
-  if (name === 'solicitacoes') carregarSolicitacoes();
-  if (name === 'enturmar')     carregarEnturmar();
-  if (name === 'relatorios')   carregarRelatorios();
-  if (name === 'logs')         carregarLogs();
+  if (name === 'solicitacoes')  carregarSolicitacoes();
+  if (name === 'enturmar')      carregarEnturmar();
+  if (name === 'relatorios')    carregarRelatorios();
+  if (name === 'logs')          carregarLogs();
+  if (name === 'colaboradores') carregarColaboradores();
+  if (name === 'dados')         carregarDados();
   closeSidebar();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -838,6 +1230,11 @@ const ACAO_CONFIG = {
 };
 
 function confirmarStatus(id, novoStatus) {
+  if (novoStatus === 'aprovado') {
+    executarStatusDireto(id, novoStatus);
+    return;
+  }
+
   const cfg = ACAO_CONFIG[novoStatus] || { titulo: 'Confirmar', cor: 'var(--navy-mid)', bg: '#f8fafc', border: '#e2e8f0', texto: 'Confirmar alteração de status?' };
   const statusAtual = STATUS_LABEL[todasSolicitacoes.find(s => s.id === id)?.status] || '–';
 
@@ -854,10 +1251,46 @@ function confirmarStatus(id, novoStatus) {
   document.getElementById('acao-modal-textarea').value = FRASES_STATUS[novoStatus] || '';
 
   const btnConfirmar = document.getElementById('btn-confirmar-acao');
-  btnConfirmar.className = `btn btn-sm ${novoStatus === 'aprovado' ? 'btn-success' : novoStatus === 'reprovado' ? 'btn-danger' : 'btn-secondary'}`;
+  btnConfirmar.className = `btn btn-sm ${novoStatus === 'reprovado' ? 'btn-danger' : 'btn-secondary'}`;
   btnConfirmar.onclick = () => executarAtualizacaoStatus(id, novoStatus);
 
   document.getElementById('acao-modal-overlay').classList.add('active');
+}
+
+async function executarStatusDireto(id, novoStatus) {
+  const solAtual       = todasSolicitacoes.find(s => s.id === id);
+  const statusAnterior = STATUS_LABEL[solAtual?.status] || '–';
+
+  const { data: atualizado, error } = await cliente
+    .from('interesse_vagas')
+    .update({ status: novoStatus })
+    .eq('id', id)
+    .select('id');
+
+  if (error) { showToast('❌ Erro ao salvar: ' + error.message); return; }
+  if (!atualizado?.length) { showToast('❌ Sem permissão. Verifique se seu usuário é colaborador ativo.'); return; }
+
+  const nomeColaborador = document.getElementById('sidebar-nome').textContent.trim() || 'Colaborador';
+
+  const statusAluno = novoStatus === 'aprovado' ? 'aprovado'
+                    : novoStatus === 'reprovado' ? 'reprovado'
+                    : 'pendente';
+  await cliente.from('alunos').update({ status_aluno: statusAluno, motivo_reprovacao: null }).eq('interesse_id', id);
+  if (solAtual?.alunos) solAtual.alunos.forEach(a => { a.status_aluno = statusAluno; a.motivo_reprovacao = null; });
+
+  await registrarHistorico(id, `Status alterado de "${statusAnterior}" para "${STATUS_LABEL[novoStatus]}"`, nomeColaborador);
+
+  const notaFinal = FRASES_STATUS[novoStatus] || '';
+  if (notaFinal) await registrarHistorico(id, notaFinal, nomeColaborador);
+
+  await registrarLog('alterar_status', 'interesse_vagas', id, `Status alterado para "${STATUS_LABEL[novoStatus]}"`);
+
+  if (solAtual) solAtual.status = novoStatus;
+  fecharModal();
+  showToast(`✅ Solicitação aprovada!`);
+  await carregarSolicitacoes();
+  await carregarStats();
+  await carregarUltimasSolicitacoes();
 }
 
 function fecharAcaoModal() {
@@ -1623,7 +2056,7 @@ async function salvarPerfil() {
 
   const { error } = await cliente
     .from('colaboradores')
-    .update({ nome })
+    .update({ nome, telefone })
     .eq('id', user.id);
 
   btn.disabled  = false;
