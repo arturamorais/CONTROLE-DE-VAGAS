@@ -2008,9 +2008,10 @@ async function carregarRelatorios() {
   if (!solics || !alunos) return;
 
   // ---- KPIs linha 1 ----
-  const total          = solics.length;
+  const total          = solics.length; // todos os status, incluindo cancelados
   const aprovados      = solics.filter(s => s.status === 'aprovado' || s.status === 'matriculado').length;
-  const taxa           = total > 0 ? Math.round((aprovados / total) * 100) : 0;
+  const concluidas     = solics.filter(s => ['aprovado','matriculado','reprovado','cancelado'].includes(s.status)).length;
+  const taxa           = concluidas > 0 ? Math.round((aprovados / concluidas) * 100) : 0;
   const tickets        = solics.map(s => s.valor_mensalidade_anterior).filter(v => v > 0);
   const ticketMed      = tickets.length ? (tickets.reduce((a,b) => a+b, 0) / tickets.length) : 0;
   const responsaveis   = new Set(solics.map(s => s.usuario_id).filter(Boolean)).size;
