@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f172a">
+  <title>Nova Senha – Colégio Plenus</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="js/supabase.js"></script>
+  <link rel="stylesheet" href="css/estilo.css">
+  <style>
+    .senha-req {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      margin-top: 0.5rem;
+      font-size: 0.775rem;
+    }
+    .senha-req li {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: #94a3b8;
+      transition: color 0.2s ease;
+    }
+    .senha-req li.ok { color: #16a34a; }
+    .senha-req li::before { content: '○'; font-size: 0.6rem; flex-shrink: 0; }
+    .senha-req li.ok::before { content: '●'; color: #16a34a; }
+
+    .field-hint {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      margin-top: 0.3rem;
+    }
+    .strength-bar {
+      height: 4px;
+      border-radius: 2px;
+      margin-top: 0.4rem;
+      background: #e2e8f0;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+    .strength-fill {
+      height: 100%;
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.3s ease, background 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+
+<div class="auth-layout">
+
+  <!-- PAINEL ESQUERDO -->
+  <div class="brand-panel">
+    <div class="brand-deco">
+      <div class="deco-circle c1"></div>
+      <div class="deco-circle c2"></div>
+      <div class="deco-circle c3"></div>
+    </div>
+    <div class="brand-body">
+      <div class="brand-logo">🔐</div>
+      <h1 class="brand-name">Nova Senha</h1>
+      <p class="brand-tagline">Crie uma senha segura<br>para proteger sua conta.</p>
+      <ul class="brand-features">
+        <li><span class="feat-icon">✦</span> Mínimo de 8 caracteres</li>
+        <li><span class="feat-icon">✦</span> Letras maiúsculas e minúsculas</li>
+        <li><span class="feat-icon">✦</span> Pelo menos um número</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- PAINEL DIREITO -->
+  <div class="form-panel">
+    <div class="form-box" id="form-box">
+
+      <!-- Estado: carregando -->
+      <div id="state-loading" class="form-header">
+        <span style="font-size:2rem">⏳</span>
+        <h2>Verificando link...</h2>
+        <p>Aguarde um momento.</p>
+      </div>
+
+      <!-- Estado: link inválido/expirado -->
+      <div id="state-invalido" style="display:none">
+        <div class="form-header">
+          <span style="font-size:2rem">❌</span>
+          <h2>Link inválido</h2>
+          <p>Este link de recuperação expirou ou já foi utilizado.</p>
+        </div>
+        <a href="index.html" class="btn-submit" style="display:block;text-align:center;text-decoration:none;margin-top:0.5rem">
+          Voltar ao login
+        </a>
+      </div>
+
+      <!-- Estado: formulário de nova senha -->
+      <div id="state-form" style="display:none">
+        <div class="form-header">
+          <span class="form-logo-sm">🔐</span>
+          <h2>Criar nova senha</h2>
+          <p>Escolha uma senha forte para sua conta</p>
+        </div>
+
+        <div class="field">
+          <label for="nova-senha">Nova senha</label>
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
+            <input type="password" id="nova-senha" placeholder="••••••••" oninput="avaliarSenha()">
+          </div>
+          <div class="strength-bar"><div class="strength-fill" id="strength-fill"></div></div>
+          <ul class="senha-req">
+            <li id="req-len">Mínimo 8 caracteres</li>
+            <li id="req-upper">Letra maiúscula</li>
+            <li id="req-number">Pelo menos um número</li>
+          </ul>
+        </div>
+
+        <div class="field">
+          <label for="confirmar-senha">Confirmar senha</label>
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
+            <input type="password" id="confirmar-senha" placeholder="••••••••">
+          </div>
+          <p class="field-hint" id="hint-match"></p>
+        </div>
+
+        <div id="reset-alert"></div>
+
+        <button class="btn-submit" id="btn-salvar" onclick="salvarNovaSenha()">
+          Salvar nova senha
+        </button>
+      </div>
+
+      <!-- Estado: sucesso -->
+      <div id="state-sucesso" style="display:none">
+        <div class="form-header">
+          <span style="font-size:2.5rem">✅</span>
+          <h2>Senha alterada!</h2>
+          <p>Sua senha foi atualizada com sucesso.</p>
+        </div>
+        <a href="index.html" class="btn-submit" style="display:block;text-align:center;text-decoration:none;margin-top:0.5rem">
+          Ir para o login
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+function setState(id) {
+  ['state-loading','state-invalido','state-form','state-sucesso'].forEach(s => {
+    document.getElementById(s).style.display = s === id ? '' : 'none';
+  });
+}
+
+// O Supabase injeta o token na hash (#) ou como query param após o redirect
+window.addEventListener('load', async () => {
+  // Tenta obter a sessão — o SDK do Supabase processa o hash automaticamente
+  const { data: { session }, error } = await cliente.auth.getSession();
+
+  if (error || !session) {
+    setState('state-invalido');
+    return;
+  }
+
+  setState('state-form');
+});
+
+function avaliarSenha() {
+  const senha = document.getElementById('nova-senha').value;
+
+  const len    = senha.length >= 8;
+  const upper  = /[A-Z]/.test(senha);
+  const number = /[0-9]/.test(senha);
+
+  document.getElementById('req-len').classList.toggle('ok', len);
+  document.getElementById('req-upper').classList.toggle('ok', upper);
+  document.getElementById('req-number').classList.toggle('ok', number);
+
+  const score = [len, upper, number].filter(Boolean).length;
+  const fill  = document.getElementById('strength-fill');
+  const pct   = score === 0 ? 0 : score === 1 ? 33 : score === 2 ? 66 : 100;
+  const cor   = score <= 1 ? '#ef4444' : score === 2 ? '#f59e0b' : '#22c55e';
+
+  fill.style.width      = pct + '%';
+  fill.style.background = cor;
+}
+
+async function salvarNovaSenha() {
+  const nova      = document.getElementById('nova-senha').value;
+  const confirmar = document.getElementById('confirmar-senha').value;
+  const btn       = document.getElementById('btn-salvar');
+  const alerta    = document.getElementById('reset-alert');
+  const hint      = document.getElementById('hint-match');
+
+  alerta.innerHTML = '';
+  hint.textContent = '';
+
+  if (nova.length < 8) {
+    alerta.innerHTML = `<div class="alert alert-error" style="margin-bottom:1rem">A senha precisa ter pelo menos 8 caracteres.</div>`;
+    return;
+  }
+
+  if (nova !== confirmar) {
+    hint.textContent = 'As senhas não coincidem.';
+    hint.style.color = '#ef4444';
+    return;
+  }
+
+  btn.disabled     = true;
+  btn.textContent  = 'Salvando...';
+
+  const { error } = await cliente.auth.updateUser({ password: nova });
+
+  btn.disabled    = false;
+  btn.textContent = 'Salvar nova senha';
+
+  if (error) {
+    alerta.innerHTML = `<div class="alert alert-error" style="margin-bottom:1rem">${error.message}</div>`;
+    return;
+  }
+
+  await cliente.auth.signOut();
+  setState('state-sucesso');
+}
+</script>
+
+</body>
+</html>

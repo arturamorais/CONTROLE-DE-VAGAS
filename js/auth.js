@@ -1,3 +1,44 @@
+async function abrirRecuperacao() {
+  const { value: email } = await Swal.fire({
+    title: 'Recuperar senha',
+    html: `
+      <p style="font-size:0.875rem;color:#475569;margin-bottom:1rem;line-height:1.55">
+        Informe seu e-mail cadastrado. Enviaremos um link para você criar uma nova senha.
+      </p>
+      <input id="swal-email-reset" type="email" class="swal2-input" placeholder="seu@email.com" style="margin:0;width:100%">
+    `,
+    showCancelButton: true,
+    confirmButtonText: 'Enviar link',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#f97316',
+    focusConfirm: false,
+    preConfirm: () => {
+      const v = document.getElementById('swal-email-reset').value.trim();
+      if (!v) { Swal.showValidationMessage('Informe seu e-mail'); return false; }
+      return v;
+    }
+  });
+
+  if (!email) return;
+
+  const { error } = await cliente.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + '/reset-senha.html'
+  });
+
+  if (error) {
+    Swal.fire({ icon: 'error', title: 'Erro', text: error.message, confirmButtonColor: '#f97316' });
+    return;
+  }
+
+  Swal.fire({
+    icon: 'success',
+    title: 'E-mail enviado!',
+    html: `<p style="font-size:0.875rem;color:#475569;line-height:1.6">Verifique sua caixa de entrada em <strong>${email}</strong> e clique no link para criar uma nova senha.</p>`,
+    confirmButtonColor: '#f97316',
+    confirmButtonText: 'Ok'
+  });
+}
+
 async function login() {
   const email = document.getElementById('email').value;
   const senha = document.getElementById('senha').value;
