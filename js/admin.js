@@ -1792,13 +1792,25 @@ async function carregarAlocacao() {
   const container = document.getElementById('alocacao-lista');
   container.innerHTML = `<div class="empty-state" style="padding:1.5rem"><span class="empty-icon">⏳</span><p>Carregando...</p></div>`;
 
-  // Alunos aprovados com dados da solicitação
-  const { data: alunos, error } = await cliente
-    .from('alunos')
-    .select('*, interesse_vagas(usuario_id, status), alocacoes(id, turma_id, turmas(serie, nome_turma, segmento, turno))')
-    .eq('status_aluno', 'aprovado');
+  // Busca paralela: alunos aprovados + todas as alocações + turmas
+  const [
+    { data: alunos,   error },
+    { data: alocList },
+    { data: turmaList }
+  ] = await Promise.all([
+    cliente.from('alunos').select('*, interesse_vagas(usuario_id, status)').eq('status_aluno', 'aprovado'),
+    cliente.from('alocacoes').select('id, aluno_id, turma_id'),
+    cliente.from('turmas').select('id, serie, nome_turma, segmento, turno')
+  ]);
 
   if (error) { container.innerHTML = `<div class="alert alert-error">${error.message}</div>`; return; }
+
+  // Montar mapas para cruzamento
+  const turmaMap = Object.fromEntries((turmaList || []).map(t => [t.id, t]));
+  const alocMap  = {};
+  (alocList || []).forEach(al => {
+    alocMap[al.aluno_id] = { ...al, turmas: turmaMap[al.turma_id] || null };
+  });
 
   // Buscar responsáveis
   const ids = [...new Set((alunos || []).map(a => a.interesse_vagas?.usuario_id).filter(Boolean))];
@@ -1807,10 +1819,14 @@ async function carregarAlocacao() {
     : { data: [] };
   const pm = Object.fromEntries((perfis || []).map(p => [p.id, p]));
 
-  todosAlunosAprovados = (alunos || []).map(a => ({
-    ...a,
-    responsavel: pm[a.interesse_vagas?.usuario_id] || {}
-  }));
+  todosAlunosAprovados = (alunos || []).map(a => {
+    const aloc = alocMap[a.id];
+    return {
+      ...a,
+      responsavel: pm[a.interesse_vagas?.usuario_id] || {},
+      alocacoes: aloc ? [aloc] : []
+    };
+  });
 
   // Também recarregar turmas para select de alocação
   if (!todasTurmas.length) await carregarEnturmar();
