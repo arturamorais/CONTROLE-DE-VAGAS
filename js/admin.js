@@ -258,7 +258,11 @@ async function excluirSolicitacao(id) {
   });
   if (!ok.isConfirmed) return;
 
-  await _deletarSolicitacao(id);
+  const { error } = await _deletarSolicitacao(id);
+  if (error) {
+    Swal.fire({ title: 'Erro ao excluir', text: error.message, icon: 'error', confirmButtonColor: '#ef4444' });
+    return;
+  }
   todasSolicitacoesDados = todasSolicitacoesDados.filter(s => s.id !== id);
   selecionadosDados.delete(id);
   atualizarBtnExcluir();
@@ -281,15 +285,24 @@ async function excluirSelecionados() {
   });
   if (!ok.isConfirmed) return;
 
-  for (const id of [...selecionadosDados]) {
-    await _deletarSolicitacao(id);
+  const idsParaDeletar = [...selecionadosDados];
+  const falhas = [];
+  for (const id of idsParaDeletar) {
+    const { error } = await _deletarSolicitacao(id);
+    if (error) falhas.push(id);
   }
 
-  todasSolicitacoesDados = todasSolicitacoesDados.filter(s => !selecionadosDados.has(s.id));
-  selecionadosDados.clear();
+  const excluidos = idsParaDeletar.filter(id => !falhas.includes(id));
+  todasSolicitacoesDados = todasSolicitacoesDados.filter(s => !excluidos.includes(s.id));
+  excluidos.forEach(id => selecionadosDados.delete(id));
   atualizarBtnExcluir();
   filtrarDados();
-  showToast(`✅ ${n} solicitaç${n !== 1 ? 'ões excluídas' : 'ão excluída'}.`);
+
+  if (falhas.length) {
+    Swal.fire({ title: 'Atenção', text: `${excluidos.length} excluído(s), ${falhas.length} não puderam ser removidos (verifique as permissões).`, icon: 'warning', confirmButtonColor: '#ef4444' });
+  } else {
+    showToast(`✅ ${n} solicitaç${n !== 1 ? 'ões excluídas' : 'ão excluída'}.`);
+  }
 }
 
 async function _deletarSolicitacao(id) {
@@ -297,11 +310,16 @@ async function _deletarSolicitacao(id) {
   const { data: alunos } = await cliente.from('alunos').select('id').eq('interesse_id', id);
   const alunoIds = (alunos || []).map(a => a.id);
   if (alunoIds.length) {
-    await cliente.from('alocacoes').delete().in('aluno_id', alunoIds);
+    const { error: eAloc } = await cliente.from('alocacoes').delete().in('aluno_id', alunoIds);
+    if (eAloc) return { error: eAloc };
   }
-  await cliente.from('historico_solicitacoes').delete().eq('interesse_id', id);
-  await cliente.from('alunos').delete().eq('interesse_id', id);
-  await cliente.from('interesse_vagas').delete().eq('id', id);
+  const { error: eHist } = await cliente.from('historico_solicitacoes').delete().eq('interesse_id', id);
+  if (eHist) return { error: eHist };
+  const { error: eAlun } = await cliente.from('alunos').delete().eq('interesse_id', id);
+  if (eAlun) return { error: eAlun };
+  const { error: eInt } = await cliente.from('interesse_vagas').delete().eq('id', id);
+  if (eInt) return { error: eInt };
+  return { error: null };
 }
 
 async function limparLogs() {
