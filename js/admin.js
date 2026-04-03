@@ -1537,7 +1537,10 @@ function switchEnturmarTab(tab) {
   document.getElementById('enturmar-alocacao').style.display = tab === 'alocacao' ? '' : 'none';
   document.getElementById('tab-turmas').classList.toggle('active',  tab === 'turmas');
   document.getElementById('tab-alocacao').classList.toggle('active', tab === 'alocacao');
-  if (tab === 'alocacao') carregarAlocacao();
+  if (tab === 'alocacao') {
+    document.getElementById('filtro-alocado').value = 'nao';
+    carregarAlocacao();
+  }
 }
 
 // ---- Turmas ----
