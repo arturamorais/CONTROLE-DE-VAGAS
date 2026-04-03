@@ -1884,11 +1884,10 @@ async function confirmarAlocacao() {
 
   fecharAlocarModal();
   showToast(`✅ Aluno enturmado com sucesso!`);
+  // Setar filtro ANTES de recarregar para que renderAlocacao já use o valor correto
+  document.getElementById('filtro-alocado').value = 'nao';
   await carregarAlocacao();
   await carregarEnturmar();
-  // Após enturmar, mostrar apenas quem ainda aguarda alocação
-  document.getElementById('filtro-alocado').value = 'nao';
-  renderAlocacao();
 }
 
 async function removerAlocacao(alunoId, alocacaoId) {
