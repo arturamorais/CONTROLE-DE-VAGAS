@@ -37,8 +37,16 @@ const STATUS_LABEL = {
 };
 
 const CARGO_LABEL = {
+  master:       'Master',
   admin:        'Administrador',
   colaborador:  'Colaborador'
+};
+
+// Permissões por cargo
+const PERMISSOES = {
+  master:      ['overview','solicitacoes','enturmar','relatorios','logs','dados','colaboradores','perfil'],
+  admin:       ['overview','solicitacoes','enturmar','relatorios','colaboradores','perfil'],
+  colaborador: ['overview','solicitacoes','enturmar','perfil']
 };
 
 const GUIAS = {
@@ -139,10 +147,16 @@ async function init() {
   document.getElementById('profile-cargo-display').textContent = cargo;
   document.getElementById('perfil-nome').value           = colab.nome;
 
-  if (colab.cargo === 'admin') {
-    document.getElementById('nav-colaboradores').style.display = '';
-    document.getElementById('nav-dados').style.display = '';
-  }
+  // Revelar itens do nav conforme permissões do cargo
+  const permitido = PERMISSOES[colab.cargo] || PERMISSOES['colaborador'];
+  ['relatorios','logs','dados','colaboradores'].forEach(sec => {
+    const el = document.getElementById('nav-' + sec);
+    if (el) el.style.display = permitido.includes(sec) ? '' : 'none';
+  });
+
+  // Opção Master no modal de adicionar colaborador — só visível para master
+  const optMaster = document.getElementById('colab-cargo-master');
+  if (optMaster) optMaster.style.display = colab.cargo === 'master' ? '' : 'none';
 
   await carregarStats();
   await carregarUltimasSolicitacoes();
@@ -414,7 +428,8 @@ async function carregarColaboradores() {
     return;
   }
 
-  const isAdmin = cargoAtual === 'admin';
+  const isAdmin  = cargoAtual === 'admin' || cargoAtual === 'master';
+  const isMaster = cargoAtual === 'master';
 
   container.innerHTML = lista.map(c => {
     const email    = emailMap[c.id] || '—';
@@ -422,12 +437,18 @@ async function carregarColaboradores() {
     const ativoClr = c.ativo ? '#22c55e' : '#94a3b8';
     const ativoTxt = c.ativo ? 'Ativo' : 'Inativo';
 
+    const opcoescargo = isMaster
+      ? `<option value="colaborador" ${c.cargo === 'colaborador' ? 'selected' : ''}>Colaborador</option>
+         <option value="admin"       ${c.cargo === 'admin'       ? 'selected' : ''}>Administrador</option>
+         <option value="master"      ${c.cargo === 'master'      ? 'selected' : ''}>Master</option>`
+      : `<option value="colaborador" ${c.cargo === 'colaborador' ? 'selected' : ''}>Colaborador</option>
+         <option value="admin"       ${c.cargo === 'admin'       ? 'selected' : ''}>Administrador</option>`;
+
     const controles = isAdmin ? `
       <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
         <select style="font-size:0.78rem;padding:0.3rem 0.5rem;border:1px solid var(--gray-light);border-radius:0.5rem;background:var(--white);color:var(--navy-mid)"
           onchange="alterarCargoColaborador('${c.id}', this.value)">
-          <option value="colaborador" ${c.cargo === 'colaborador' ? 'selected' : ''}>Colaborador</option>
-          <option value="admin"       ${c.cargo === 'admin'       ? 'selected' : ''}>Administrador</option>
+          ${opcoescargo}
         </select>
         <button class="btn btn-sm" style="font-size:0.78rem;padding:0.3rem 0.75rem;background:${c.ativo ? '#fee2e2' : '#dcfce7'};color:${c.ativo ? '#b91c1c' : '#15803d'};border:1px solid ${c.ativo ? '#fca5a5' : '#86efac'};border-radius:0.5rem"
           onclick="toggleColaboradorAtivo('${c.id}', ${c.ativo})">
@@ -560,6 +581,11 @@ async function alterarCargoColaborador(id, novoCargo) {
 //  NAVEGAÇÃO
 // ============================================================
 function showSection(name) {
+  const permitido = PERMISSOES[cargoAtual] || PERMISSOES['colaborador'];
+  if (!permitido.includes(name)) {
+    showToast('⚠️ Você não tem permissão para acessar esta seção.');
+    return;
+  }
   document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
   document.getElementById('section-' + name).classList.add('active');
