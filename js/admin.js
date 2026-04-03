@@ -1290,9 +1290,56 @@ function confirmarStatus(id, novoStatus) {
   document.getElementById('acao-modal-overlay').classList.add('active');
 }
 
+// ---- Confirmação de atualização em massa dos alunos ----
+async function pedirConfirmacaoAlunos(alunos, novoStatusAluno) {
+  if (!alunos || !alunos.length) return true;
+
+  const icone = { aprovado: '✅', reprovado: '✕', pendente: '⏳' };
+  const cor   = { aprovado: '#15803d', reprovado: '#dc2626', pendente: '#b45309' };
+  const label = STATUS_ALUNO_LABEL[novoStatusAluno] || novoStatusAluno;
+
+  const listaHtml = alunos.map(a => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0.45rem 0.75rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:0.5rem;margin-bottom:0.3rem;font-size:0.82rem;gap:0.5rem">
+      <span style="font-weight:600;color:#0f172a;text-align:left">${escapeHtml(a.nome_aluno)}</span>
+      <span style="color:${cor[novoStatusAluno] || '#475569'};font-weight:700;white-space:nowrap">${icone[novoStatusAluno] || ''} ${label}</span>
+    </div>`).join('');
+
+  const { isConfirmed } = await Swal.fire({
+    title: 'Atualizar status dos alunos?',
+    html: `
+      <p style="font-size:0.875rem;color:#475569;margin-bottom:0.875rem">
+        A alteração da solicitação irá atualizar o status de <strong>${alunos.length} aluno${alunos.length !== 1 ? 's' : ''}</strong> para
+        <strong style="color:${cor[novoStatusAluno] || '#475569'}">${label}</strong>:
+      </p>
+      <div style="max-height:220px;overflow-y:auto;margin-bottom:0.75rem">${listaHtml}</div>
+      <p style="font-size:0.75rem;color:#94a3b8">Você poderá ajustar o status de cada aluno individualmente depois.</p>`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: `Sim, atualizar todos`,
+    cancelButtonText: 'Não, manter como estão',
+    confirmButtonColor: cor[novoStatusAluno] || '#3b82f6',
+    cancelButtonColor: '#64748b',
+    reverseButtons: true,
+    customClass: { popup: 'swal-wide' }
+  });
+
+  return isConfirmed;
+}
+
 async function executarStatusDireto(id, novoStatus) {
   const solAtual       = todasSolicitacoes.find(s => s.id === id);
   const statusAnterior = STATUS_LABEL[solAtual?.status] || '–';
+  const alunos         = solAtual?.alunos || [];
+
+  const statusAluno = novoStatus === 'aprovado' ? 'aprovado'
+                    : novoStatus === 'reprovado' ? 'reprovado'
+                    : 'pendente';
+
+  // Confirmação de atualização em massa dos alunos
+  if (alunos.length > 0) {
+    const confirmar = await pedirConfirmacaoAlunos(alunos, statusAluno);
+    if (!confirmar) return;
+  }
 
   const { data: atualizado, error } = await cliente
     .from('interesse_vagas')
@@ -1305,9 +1352,6 @@ async function executarStatusDireto(id, novoStatus) {
 
   const nomeColaborador = document.getElementById('sidebar-nome').textContent.trim() || 'Colaborador';
 
-  const statusAluno = novoStatus === 'aprovado' ? 'aprovado'
-                    : novoStatus === 'reprovado' ? 'reprovado'
-                    : 'pendente';
   await cliente.from('alunos').update({ status_aluno: statusAluno, motivo_reprovacao: null }).eq('interesse_id', id);
   if (solAtual?.alunos) solAtual.alunos.forEach(a => { a.status_aluno = statusAluno; a.motivo_reprovacao = null; });
 
@@ -1335,14 +1379,25 @@ function fecharAcaoModalClick(event) {
 }
 
 async function executarAtualizacaoStatus(id, novoStatus) {
-  const btn = document.getElementById('btn-confirmar-acao');
+  const btn  = document.getElementById('btn-confirmar-acao');
   const nota = document.getElementById('acao-modal-textarea').value.trim();
-
-  btn.disabled = true;
-  btn.innerHTML = '<span class="loading"></span> Salvando...';
 
   const solAtual       = todasSolicitacoes.find(s => s.id === id);
   const statusAnterior = STATUS_LABEL[solAtual?.status] || '–';
+  const alunos         = solAtual?.alunos || [];
+
+  const statusAluno = novoStatus === 'aprovado' ? 'aprovado'
+                    : novoStatus === 'reprovado' ? 'reprovado'
+                    : 'pendente';
+
+  // Confirmação de atualização em massa dos alunos (antes de salvar)
+  if (alunos.length > 0) {
+    const confirmar = await pedirConfirmacaoAlunos(alunos, statusAluno);
+    if (!confirmar) return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading"></span> Salvando...';
 
   const { data: atualizado, error } = await cliente
     .from('interesse_vagas')
@@ -1359,16 +1414,12 @@ async function executarAtualizacaoStatus(id, novoStatus) {
   const nomeColaborador = document.getElementById('sidebar-nome').textContent.trim() || 'Colaborador';
 
   // Propaga o novo status para todos os alunos da solicitação
-  const statusAluno = novoStatus === 'aprovado' ? 'aprovado'
-                    : novoStatus === 'reprovado' ? 'reprovado'
-                    : 'pendente';
   await cliente.from('alunos').update({ status_aluno: statusAluno, motivo_reprovacao: null }).eq('interesse_id', id);
   if (solAtual?.alunos) solAtual.alunos.forEach(a => { a.status_aluno = statusAluno; a.motivo_reprovacao = null; });
 
   // Registra mudança de status no histórico
   await registrarHistorico(id, `Status alterado de "${statusAnterior}" para "${STATUS_LABEL[novoStatus]}"`, nomeColaborador);
 
-  // Registra a nota sempre (mesmo sendo a frase padrão)
   const notaFinal = nota || FRASES_STATUS[novoStatus] || '';
   if (notaFinal) await registrarHistorico(id, notaFinal, nomeColaborador);
 
