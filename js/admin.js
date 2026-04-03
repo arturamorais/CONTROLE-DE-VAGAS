@@ -545,7 +545,7 @@ function showSection(name) {
   if (nav) nav.classList.add('active');
   const titles = {
     'overview':       'Início',
-    'solicitacoes':   'Gestão',
+    'solicitacoes':   'Solicitações',
     'enturmar':       'Enturmar',
     'relatorios':     'Relatórios',
     'logs':           'Atividade',
@@ -648,7 +648,7 @@ async function carregarSolicitacoes() {
 
   const { data: solicitacoes, error } = await cliente
     .from('interesse_vagas')
-    .select('*, alunos(*)')
+    .select('*, alunos(*, alocacoes(id, turmas(nome_turma, serie, segmento, turno)))')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -970,6 +970,10 @@ function renderAlunosDetalhe(alunos, interesseId) {
     const statusAluno = a.status_aluno || 'pendente';
     const aprovado    = statusAluno === 'aprovado';
     const reprovado   = statusAluno === 'reprovado';
+    const alocacao    = a.alocacoes?.[0];
+    const turmaInfo   = alocacao?.turmas
+      ? `${alocacao.turmas.serie} – ${alocacao.turmas.nome_turma} (${TURNO_LABEL_FULL[alocacao.turmas.turno] || alocacao.turmas.turno})`
+      : null;
     return `
       <div class="aluno-detalhe-item" id="aluno-row-${a.id}" style="flex-direction:column;align-items:stretch;padding:0.875rem 1rem;gap:0.625rem">
         <div style="display:flex;align-items:center;gap:0.625rem;flex-wrap:wrap">
@@ -984,6 +988,13 @@ function renderAlunosDetalhe(alunos, interesseId) {
         ${reprovado && a.motivo_reprovacao ? `
           <div style="background:#fee2e2;border:1px solid #fecaca;border-radius:0.5rem;padding:0.5rem 0.75rem;font-size:0.78rem;color:#dc2626">
             <strong>Motivo:</strong> ${escapeHtml(a.motivo_reprovacao)}
+          </div>` : ''}
+
+        ${aprovado ? `
+          <div id="aluno-enturma-${a.id}" style="background:${turmaInfo ? '#f0fdf4' : '#fefce8'};border:1px solid ${turmaInfo ? '#bbf7d0' : '#fde68a'};border-radius:0.5rem;padding:0.5rem 0.75rem;font-size:0.78rem;color:${turmaInfo ? '#15803d' : '#92400e'}">
+            ${turmaInfo
+              ? `🏫 <strong>Enturmado:</strong> ${escapeHtml(turmaInfo)}`
+              : `⏳ <strong>Aguardando enturmação</strong> — aprovado mas ainda não alocado em nenhuma turma`}
           </div>` : ''}
 
         <div id="aluno-acoes-${a.id}" style="display:flex;gap:0.5rem;flex-wrap:wrap">
