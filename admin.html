@@ -54,6 +54,10 @@
       </p>
       <div class="form-grid" style="gap:0.875rem">
         <div class="form-group full-width">
+          <label>Nome completo *</label>
+          <input type="text" id="colab-nome-input" placeholder="Nome do colaborador">
+        </div>
+        <div class="form-group full-width">
           <label>E-mail do usuário *</label>
           <input type="email" id="colab-email-input" placeholder="email@exemplo.com">
         </div>
@@ -572,7 +576,16 @@
         </div>
       </div>
 
-      <!-- Linha 5: Motivos saída + Motivos Plenus -->
+      <!-- Linha 5: Relatório por turma -->
+      <div class="card" style="margin-bottom:1.5rem" id="rel-turmas-card">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+          <span>📋 Relatório por Turma</span>
+          <button class="btn btn-secondary btn-sm" onclick="imprimirRelatorioTurmas()" style="font-size:0.78rem">🖨️ Imprimir todas</button>
+        </div>
+        <div id="rel-turmas-lista"></div>
+      </div>
+
+      <!-- Linha 6: Motivos saída + Motivos Plenus -->
       <div class="rel-row-2">
         <div class="card rel-chart-card">
           <div class="card-title">🚪 Motivos de Saída da Escola Anterior</div>

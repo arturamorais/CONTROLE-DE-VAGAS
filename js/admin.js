@@ -473,6 +473,7 @@ async function carregarColaboradores() {
 }
 
 function abrirModalAdicionarColaborador() {
+  document.getElementById('colab-nome-input').value    = '';
   document.getElementById('colab-email-input').value   = '';
   document.getElementById('colab-cargo-select').value  = 'colaborador';
   document.getElementById('colab-modal-alert').innerHTML = '';
@@ -488,12 +489,17 @@ function fecharColabModalClick(e) {
 }
 
 async function salvarNovoColaborador() {
+  const nome  = document.getElementById('colab-nome-input').value.trim();
   const email = document.getElementById('colab-email-input').value.trim().toLowerCase();
   const cargo = document.getElementById('colab-cargo-select').value;
   const alert = document.getElementById('colab-modal-alert');
   const btn   = document.getElementById('btn-salvar-colab');
 
   alert.innerHTML = '';
+  if (!nome) {
+    alert.innerHTML = `<div class="alert alert-error">Informe o nome do colaborador.</div>`;
+    return;
+  }
   if (!email) {
     alert.innerHTML = `<div class="alert alert-error">Informe o e-mail do usuário.</div>`;
     return;
@@ -504,7 +510,7 @@ async function salvarNovoColaborador() {
 
   const { data: usuario } = await cliente
     .from('usuarios')
-    .select('id, nome')
+    .select('id')
     .eq('email', email)
     .single();
 
@@ -531,7 +537,7 @@ async function salvarNovoColaborador() {
 
   const { error } = await cliente.from('colaboradores').insert({
     id:    usuario.id,
-    nome:  usuario.nome,
+    nome,
     cargo,
     ativo: true
   });
@@ -544,7 +550,7 @@ async function salvarNovoColaborador() {
   }
 
   await registrarLog('adicionar_colaborador', 'colaboradores', usuario.id,
-    `Colaborador ${usuario.nome} (${email}) adicionado com cargo ${CARGO_LABEL[cargo]}`);
+    `Colaborador ${nome} (${email}) adicionado com cargo ${CARGO_LABEL[cargo]}`);
 
   fecharColabModal();
   showToast('✅ Colaborador adicionado com sucesso!');
@@ -2026,9 +2032,9 @@ async function carregarRelatorios() {
   // 1. Busca dados
   const [{ data: solics }, { data: alunos }, { data: turmas }, { data: alocacoes }] = await Promise.all([
     cliente.from('interesse_vagas').select('id, status, motivo_transferencia, motivo_escolha_plenus, valor_mensalidade_anterior, created_at, usuario_id'),
-    cliente.from('alunos').select('id, interesse_id, segmento, turma, turno, status_aluno'),
+    cliente.from('alunos').select('id, interesse_id, nome_aluno, segmento, turma, turno, status_aluno'),
     cliente.from('turmas').select('id, serie, nome_turma, segmento, turno, capacidade'),
-    cliente.from('alocacoes').select('id, turma_id')
+    cliente.from('alocacoes').select('id, turma_id, aluno_id')
   ]);
 
   if (!solics || !alunos) return;
@@ -2054,7 +2060,6 @@ async function carregarRelatorios() {
   const matriculados  = solics.filter(s => s.status === 'matriculado').length;
   const cancelados    = solics.filter(s => s.status === 'cancelado').length;
   const reprovados    = solics.filter(s => s.status === 'reprovado').length;
-  const alocIds       = new Set((alocacoes || []).map(a => a.turma_id ? a : null).filter(Boolean).map(() => true));
   const enturmados    = (alocacoes || []).length;
   const alunosAprov   = alunos.filter(a => a.status_aluno === 'aprovado').length;
   const aguardando    = Math.max(0, alunosAprov - enturmados);
@@ -2068,6 +2073,18 @@ async function carregarRelatorios() {
   // Mapa turma_id → contagem de alocados
   const alocPorTurma = {};
   (alocacoes || []).forEach(a => { alocPorTurma[a.turma_id] = (alocPorTurma[a.turma_id] || 0) + 1; });
+
+  // Mapa turma_id → [alunos] para o relatório por turma
+  const alunoMap = {};
+  (alunos || []).forEach(a => { alunoMap[a.id] = a; });
+  const alunosPorTurma = {};
+  (alocacoes || []).forEach(a => {
+    if (!alunosPorTurma[a.turma_id]) alunosPorTurma[a.turma_id] = [];
+    const al = alunoMap[a.aluno_id];
+    if (al) alunosPorTurma[a.turma_id].push(al);
+  });
+  _relTurmasData = { turmas: turmas || [], alunosPorTurma };
+  renderRelatorioTurmas(_relTurmasData);
 
   // ---- helpers ----
   function contarCampo(arr, campo) {
@@ -2283,6 +2300,134 @@ async function carregarRelatorios() {
       scales: { x: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f1f5f9' } }, y: { grid: { display: false }, ticks: { font: { size: 11 } } } }
     }
   });
+}
+
+// ============================================================
+//  RELATÓRIO POR TURMA
+// ============================================================
+let _relTurmasData = null;
+
+function renderRelatorioTurmas({ turmas, alunosPorTurma }) {
+  const container = document.getElementById('rel-turmas-lista');
+  if (!container) return;
+
+  const turmasCom = turmas.filter(t => (alunosPorTurma[t.id] || []).length > 0);
+  const turmasSem = turmas.filter(t => !(alunosPorTurma[t.id] || []).length);
+  const lista = [...turmasCom, ...turmasSem];
+
+  if (!lista.length) {
+    container.innerHTML = `<p style="color:var(--gray-dark);padding:1rem 0;font-size:0.875rem">Nenhuma turma cadastrada.</p>`;
+    return;
+  }
+
+  const TURNO_L = { manha: 'Manhã', tarde: 'Tarde', tanto_faz: 'Tanto Faz', integral: 'Integral' };
+
+  container.innerHTML = lista.map(t => {
+    const alunos  = (alunosPorTurma[t.id] || []).sort((a,b) => a.nome_aluno.localeCompare(b.nome_aluno));
+    const total   = alunos.length;
+    const cap     = t.capacidade || 0;
+    const pct     = cap > 0 ? Math.round((total / cap) * 100) : null;
+    const pctCor  = pct === null ? '#94a3b8' : pct >= 100 ? '#ef4444' : pct >= 80 ? '#f59e0b' : '#22c55e';
+    const turnoStr = TURNO_L[t.turno] || t.turno || '–';
+    const segStr   = SEGMENTO_LABEL[t.segmento] || t.segmento || '–';
+
+    const alunosHtml = total
+      ? alunos.map((a, i) => `
+          <div style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0;border-bottom:1px solid #f1f5f9;font-size:0.82rem">
+            <span style="min-width:1.4rem;color:#94a3b8;font-size:0.75rem">${i + 1}.</span>
+            <span style="flex:1;font-weight:500">${escapeHtml(a.nome_aluno)}</span>
+            <span style="color:var(--gray-dark);font-size:0.75rem">${escapeHtml(a.turma || '–')}</span>
+          </div>`).join('')
+      : `<p style="font-size:0.82rem;color:#94a3b8;padding:0.5rem 0;margin:0">Nenhum aluno enturmado.</p>`;
+
+    return `
+      <div style="border:1px solid var(--gray-light);border-radius:0.75rem;margin-bottom:1rem;overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:#f8fafc;flex-wrap:wrap;gap:0.5rem">
+          <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
+            <span style="font-weight:700;font-size:0.9rem">${escapeHtml(t.nome_turma)}</span>
+            <span style="font-size:0.75rem;color:var(--gray-dark)">${escapeHtml(t.serie)} · ${segStr} · ${turnoStr}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.75rem">
+            <span style="font-size:0.8rem;font-weight:600;color:${pctCor}">
+              ${total}${cap > 0 ? `/${cap}` : ''} aluno${total !== 1 ? 's' : ''}${pct !== null ? ` (${pct}%)` : ''}
+            </span>
+            <button class="btn btn-secondary btn-sm" style="font-size:0.75rem;padding:0.2rem 0.6rem"
+              onclick="imprimirTurmaRel('${t.id}')">🖨️ Imprimir</button>
+          </div>
+        </div>
+        <div style="padding:0.5rem 1rem 0.75rem">${alunosHtml}</div>
+      </div>`;
+  }).join('');
+}
+
+function imprimirTurmaRel(turmaId) {
+  if (!_relTurmasData) return;
+  const t = _relTurmasData.turmas.find(x => x.id === turmaId);
+  if (!t) return;
+  const alunos = (_relTurmasData.alunosPorTurma[turmaId] || [])
+    .sort((a,b) => a.nome_aluno.localeCompare(b.nome_aluno));
+  const TURNO_L = { manha: 'Manhã', tarde: 'Tarde', tanto_faz: 'Tanto Faz', integral: 'Integral' };
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html lang="pt-br"><head><meta charset="UTF-8">
+    <title>Lista – ${t.nome_turma}</title>
+    <style>
+      body{font-family:Inter,sans-serif;padding:2rem;color:#0f172a}
+      h1{font-size:1.2rem;margin:0 0 0.25rem}
+      .sub{font-size:0.85rem;color:#475569;margin-bottom:1.5rem}
+      table{width:100%;border-collapse:collapse;font-size:0.9rem}
+      th{text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #0f172a;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em}
+      td{padding:0.5rem 0.75rem;border-bottom:1px solid #e2e8f0}
+      tr:nth-child(even) td{background:#f8fafc}
+      .footer{margin-top:2rem;font-size:0.75rem;color:#94a3b8}
+      @media print{body{padding:1rem}}
+    </style></head><body>
+    <h1>${escapeHtml(t.nome_turma)}</h1>
+    <div class="sub">${SEGMENTO_LABEL[t.segmento]||t.segmento} · ${escapeHtml(t.serie)} · ${TURNO_L[t.turno]||t.turno} · Capacidade: ${t.capacidade||'–'}</div>
+    <table>
+      <thead><tr><th>#</th><th>Nome do Aluno</th><th>Série / Turma solicitada</th></tr></thead>
+      <tbody>
+        ${alunos.length
+          ? alunos.map((a,i) => `<tr><td>${i+1}</td><td>${escapeHtml(a.nome_aluno)}</td><td>${escapeHtml(a.turma||'–')}</td></tr>`).join('')
+          : '<tr><td colspan="3" style="color:#94a3b8;text-align:center;padding:1rem">Nenhum aluno enturmado.</td></tr>'}
+      </tbody>
+    </table>
+    <div class="footer">Impresso em ${new Date().toLocaleString('pt-BR')} · Colégio Plenus</div>
+    <script>window.onload=()=>{window.print();}<\/script>
+    </body></html>`);
+  win.document.close();
+}
+
+function imprimirRelatorioTurmas() {
+  if (!_relTurmasData) { showToast('⚠️ Carregue o relatório primeiro.'); return; }
+  const { turmas, alunosPorTurma } = _relTurmasData;
+  const TURNO_L = { manha: 'Manhã', tarde: 'Tarde', tanto_faz: 'Tanto Faz', integral: 'Integral' };
+  const blocos = turmas.map(t => {
+    const alunos = (alunosPorTurma[t.id] || []).sort((a,b) => a.nome_aluno.localeCompare(b.nome_aluno));
+    return `
+      <div style="margin-bottom:2rem;page-break-inside:avoid">
+        <h2 style="font-size:1rem;margin:0 0 0.2rem">${escapeHtml(t.nome_turma)}</h2>
+        <div style="font-size:0.8rem;color:#475569;margin-bottom:0.75rem">${SEGMENTO_LABEL[t.segmento]||t.segmento} · ${escapeHtml(t.serie)} · ${TURNO_L[t.turno]||t.turno} · ${alunos.length}/${t.capacidade||'–'} alunos</div>
+        <table style="width:100%;border-collapse:collapse;font-size:0.85rem">
+          <thead><tr><th style="text-align:left;padding:0.3rem 0.5rem;border-bottom:1px solid #0f172a">#</th><th style="text-align:left;padding:0.3rem 0.5rem;border-bottom:1px solid #0f172a">Nome</th><th style="text-align:left;padding:0.3rem 0.5rem;border-bottom:1px solid #0f172a">Série solicitada</th></tr></thead>
+          <tbody>${alunos.length
+            ? alunos.map((a,i) => `<tr><td style="padding:0.3rem 0.5rem;border-bottom:1px solid #e2e8f0">${i+1}</td><td style="padding:0.3rem 0.5rem;border-bottom:1px solid #e2e8f0">${escapeHtml(a.nome_aluno)}</td><td style="padding:0.3rem 0.5rem;border-bottom:1px solid #e2e8f0">${escapeHtml(a.turma||'–')}</td></tr>`).join('')
+            : '<tr><td colspan="3" style="padding:0.5rem;color:#94a3b8">Sem alunos enturmados.</td></tr>'
+          }</tbody>
+        </table>
+      </div>`;
+  }).join('<hr style="border:none;border-top:1px solid #e2e8f0;margin:1.5rem 0">');
+
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html lang="pt-br"><head><meta charset="UTF-8">
+    <title>Relatório por Turma – Colégio Plenus</title>
+    <style>body{font-family:Inter,sans-serif;padding:2rem;color:#0f172a}h1{font-size:1.3rem;margin-bottom:0.25rem}.sub{font-size:0.85rem;color:#475569;margin-bottom:2rem}@media print{body{padding:1rem}}</style>
+    </head><body>
+    <h1>Relatório por Turma</h1>
+    <div class="sub">Colégio Plenus · Gerado em ${new Date().toLocaleString('pt-BR')}</div>
+    ${blocos}
+    <script>window.onload=()=>{window.print();}<\/script>
+    </body></html>`);
+  win.document.close();
 }
 
 function exportarCSV() {
