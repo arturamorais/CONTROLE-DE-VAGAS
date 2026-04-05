@@ -454,13 +454,16 @@ async function carregarColaboradores() {
           onclick="toggleColaboradorAtivo('${c.id}', ${c.ativo})">
           ${c.ativo ? '🔴 Desativar' : '🟢 Ativar'}
         </button>
+        <button class="btn btn-secondary btn-sm" onclick="abrirEditarColaborador('${c.id}','${escapeHtml(c.nome)}')">✏️ Editar</button>
+        <button class="btn btn-sm" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;border-radius:0.5rem;font-size:0.78rem;padding:0.3rem 0.75rem"
+          onclick="excluirColaborador('${c.id}','${escapeHtml(c.nome)}')">🗑️ Excluir</button>
       </div>` : '';
 
     return `
       <div style="display:flex;align-items:center;padding:0.875rem 0;border-bottom:1px solid var(--gray-light);gap:1rem;flex-wrap:wrap">
         <div style="flex:1;min-width:150px">
           <div style="font-weight:600;font-size:0.875rem">${c.nome}</div>
-          <div style="font-size:0.78rem;color:var(--gray-dark)">${email}</div>
+          <div style="font-size:0.78rem;color:var(--gray-dark);overflow-wrap:break-word;word-break:break-all">${escapeHtml(email)}</div>
         </div>
         <div style="display:flex;align-items:center;gap:0.4rem;font-size:0.78rem;color:${ativoClr};font-weight:600">
           <span style="width:8px;height:8px;border-radius:50%;background:${ativoClr};display:inline-block"></span>
@@ -554,6 +557,59 @@ async function salvarNovoColaborador() {
 
   fecharColabModal();
   showToast('✅ Colaborador adicionado com sucesso!');
+  carregarColaboradores();
+}
+
+function abrirEditarColaborador(id, nome) {
+  document.getElementById('colab-edit-id').value      = id;
+  document.getElementById('colab-edit-nome').value    = nome;
+  document.getElementById('colab-edit-alert').innerHTML = '';
+  document.getElementById('colab-edit-modal-overlay').classList.add('active');
+}
+
+function fecharEditarColabModal() {
+  document.getElementById('colab-edit-modal-overlay').classList.remove('active');
+}
+
+async function salvarEdicaoColaborador() {
+  const id      = document.getElementById('colab-edit-id').value;
+  const nome    = document.getElementById('colab-edit-nome').value.trim();
+  const alertEl = document.getElementById('colab-edit-alert');
+  const btn     = document.getElementById('btn-salvar-colab-edit');
+
+  alertEl.innerHTML = '';
+  if (!nome) { alertEl.innerHTML = `<div class="alert alert-error">Informe o nome.</div>`; return; }
+
+  btn.disabled = true; btn.textContent = 'Salvando...';
+  const { error } = await cliente.from('colaboradores').update({ nome }).eq('id', id);
+  btn.disabled = false; btn.textContent = '💾 Salvar';
+
+  if (error) { alertEl.innerHTML = `<div class="alert alert-error">Erro: ${error.message}</div>`; return; }
+
+  await registrarLog('editar_colaborador', 'colaboradores', id, `Nome atualizado para ${nome}`);
+  fecharEditarColabModal();
+  showToast('✅ Colaborador atualizado!');
+  carregarColaboradores();
+}
+
+async function excluirColaborador(id, nome) {
+  const { isConfirmed } = await Swal.fire({
+    title: 'Excluir colaborador?',
+    html: `<p>Remover <strong>${escapeHtml(nome)}</strong> do painel de gestão?</p>
+           <p style="font-size:0.82rem;color:#94a3b8;margin-top:0.4rem">O cadastro do usuário no sistema não será afetado.</p>`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Sim, excluir',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#dc2626'
+  });
+  if (!isConfirmed) return;
+
+  const { error } = await cliente.from('colaboradores').delete().eq('id', id);
+  if (error) { showToast('❌ Erro ao excluir: ' + error.message); return; }
+
+  await registrarLog('excluir_colaborador', 'colaboradores', id, `Colaborador ${nome} removido do painel`);
+  showToast('✅ Colaborador removido.');
   carregarColaboradores();
 }
 

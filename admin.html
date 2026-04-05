@@ -78,6 +78,28 @@
   </div>
 </div>
 
+<!-- MODAL editar colaborador -->
+<div id="colab-edit-modal-overlay" class="modal-overlay" style="z-index:700" onclick="if(event.target===this)fecharEditarColabModal()">
+  <div class="modal-box" style="max-width:400px">
+    <div class="modal-header">
+      <div><h2 style="font-size:1rem">👥 Editar Colaborador</h2></div>
+      <button class="modal-close" onclick="fecharEditarColabModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="colab-edit-id">
+      <div class="form-group full-width" style="margin-bottom:0.875rem">
+        <label>Nome completo *</label>
+        <input type="text" id="colab-edit-nome" placeholder="Nome do colaborador">
+      </div>
+      <div id="colab-edit-alert"></div>
+      <div style="display:flex;justify-content:flex-end;gap:0.75rem;margin-top:1.25rem">
+        <button class="btn btn-secondary" onclick="fecharEditarColabModal()">Cancelar</button>
+        <button class="btn btn-primary" id="btn-salvar-colab-edit" onclick="salvarEdicaoColaborador()">💾 Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL editar responsável -->
 <div id="cad-resp-modal-overlay" class="modal-overlay" style="z-index:700" onclick="if(event.target===this)fecharRespModal()">
   <div class="modal-box" style="max-width:440px">
