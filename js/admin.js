@@ -2459,10 +2459,12 @@ async function carregarAlunosCad() {
   document.getElementById('cad-aluno-lista').innerHTML =
     `<div class="empty-state" style="padding:1.5rem"><span class="empty-icon">⏳</span><p>Carregando...</p></div>`;
 
-  const { data, error } = await cliente
-    .from('alunos')
-    .select('id, nome_aluno, segmento, turma, turno, status_aluno, interesse_vagas(id, usuario_id, usuarios(nome, email))')
-    .order('nome_aluno');
+  // 3 queries separadas para evitar join encadeado bloqueado pelo RLS
+  const [{ data: alunos, error }, { data: solics }, { data: users }] = await Promise.all([
+    cliente.from('alunos').select('id, nome_aluno, segmento, turma, turno, status_aluno, interesse_id').order('nome_aluno'),
+    cliente.from('interesse_vagas').select('id, usuario_id'),
+    cliente.from('usuarios').select('id, nome')
+  ]);
 
   if (error) {
     document.getElementById('cad-aluno-lista').innerHTML =
@@ -2470,7 +2472,16 @@ async function carregarAlunosCad() {
     return;
   }
 
-  _todosAlunosCad = data || [];
+  const solicsMap = {};
+  (solics || []).forEach(s => { solicsMap[s.id] = s.usuario_id; });
+  const usersMap = {};
+  (users || []).forEach(u => { usersMap[u.id] = u; });
+
+  _todosAlunosCad = (alunos || []).map(a => ({
+    ...a,
+    _responsavel: usersMap[solicsMap[a.interesse_id]] || null
+  }));
+
   filtrarAlunosCad();
 }
 
@@ -2502,8 +2513,7 @@ function renderAlunosCad(lista) {
   const TURNO_L  = { manha: 'Manhã', tarde: 'Tarde', tanto_faz: 'Tanto faz' };
 
   container.innerHTML = lista.map(a => {
-    const resp    = a.interesse_vagas?.usuarios;
-    const respNome = resp?.nome || '–';
+    const respNome = a._responsavel?.nome || '–';
     const st      = a.status_aluno || 'pendente';
     const cor     = STATUS_COR[st] || '';
     return `
