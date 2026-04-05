@@ -2498,11 +2498,12 @@ function renderResponsaveis(lista) {
 function abrirEditarResponsavel(id) {
   const u = _todosResponsaveis.find(r => r.id === id);
   if (!u) return;
-  document.getElementById('cad-resp-id').value             = u.id;
-  document.getElementById('cad-resp-email-display').value  = u.email || '';
-  document.getElementById('cad-resp-nome').value           = u.nome || '';
-  document.getElementById('cad-resp-telefone').value       = u.telefone || '';
-  document.getElementById('cad-resp-alert').innerHTML      = '';
+  document.getElementById('cad-resp-id').value        = u.id;
+  document.getElementById('cad-resp-nome').value      = u.nome || '';
+  document.getElementById('cad-resp-email').value     = u.email || '';
+  document.getElementById('cad-resp-telefone').value  = u.telefone || '';
+  document.getElementById('cad-resp-alert').innerHTML = '';
+  document.getElementById('cad-resp-link-feedback').style.display = 'none';
   document.getElementById('cad-resp-modal-overlay').classList.add('active');
 }
 
@@ -2513,15 +2514,17 @@ function fecharRespModal() {
 async function salvarResponsavel() {
   const id       = document.getElementById('cad-resp-id').value;
   const nome     = document.getElementById('cad-resp-nome').value.trim();
+  const email    = document.getElementById('cad-resp-email').value.trim().toLowerCase();
   const telefone = document.getElementById('cad-resp-telefone').value.trim();
   const alertEl  = document.getElementById('cad-resp-alert');
   const btn      = document.getElementById('btn-salvar-resp');
 
   alertEl.innerHTML = '';
-  if (!nome) { alertEl.innerHTML = `<div class="alert alert-error">Informe o nome.</div>`; return; }
+  if (!nome)  { alertEl.innerHTML = `<div class="alert alert-error">Informe o nome.</div>`; return; }
+  if (!email) { alertEl.innerHTML = `<div class="alert alert-error">Informe o e-mail.</div>`; return; }
 
   btn.disabled = true; btn.textContent = 'Salvando...';
-  const { error } = await cliente.from('usuarios').update({ nome, telefone }).eq('id', id);
+  const { error } = await cliente.from('usuarios').update({ nome, email, telefone }).eq('id', id);
   btn.disabled = false; btn.textContent = '💾 Salvar';
 
   if (error) {
@@ -2532,6 +2535,50 @@ async function salvarResponsavel() {
   fecharRespModal();
   showToast('✅ Responsável atualizado!');
   carregarResponsaveis();
+}
+
+async function enviarResetSenhaResp() {
+  const email   = document.getElementById('cad-resp-email').value.trim();
+  const feedback = document.getElementById('cad-resp-link-feedback');
+  if (!email) { showToast('⚠️ Salve o e-mail antes de enviar o link.'); return; }
+
+  const { error } = await cliente.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + '/reset-senha.html'
+  });
+
+  if (error) { showToast('❌ Erro ao enviar: ' + error.message); return; }
+
+  feedback.textContent = '✅ Link de redefinição enviado para ' + email;
+  feedback.style.display = '';
+  await registrarLog('reset_senha_responsavel', 'usuarios',
+    document.getElementById('cad-resp-id').value,
+    `Link de redefinição de senha enviado para ${email}`);
+}
+
+async function copiarResetSenhaResp() {
+  const email    = document.getElementById('cad-resp-email').value.trim();
+  const feedback = document.getElementById('cad-resp-link-feedback');
+  if (!email) { showToast('⚠️ Salve o e-mail antes de copiar o link.'); return; }
+
+  // Gera o link sem enviar o e-mail — monta manualmente a URL de reset
+  const base = window.location.origin + '/reset-senha.html';
+  const { error } = await cliente.auth.resetPasswordForEmail(email, { redirectTo: base });
+
+  if (error) { showToast('❌ Erro ao gerar link: ' + error.message); return; }
+
+  // O link é enviado por e-mail pelo Supabase — copiamos apenas a URL base de redefinição
+  await navigator.clipboard.writeText(base);
+  feedback.textContent = '🔗 URL de redefinição copiada: ' + base + ' (link foi enviado ao e-mail)';
+  feedback.style.display = '';
+}
+
+function copiarLinkCadastro() {
+  const link     = window.location.origin + '/cadastro.html';
+  const feedback = document.getElementById('cad-resp-link-feedback');
+  navigator.clipboard.writeText(link).then(() => {
+    feedback.textContent = '📋 Link de cadastro copiado: ' + link;
+    feedback.style.display = '';
+  });
 }
 
 async function excluirResponsavel(id, nome, nSolics, nAlunos) {

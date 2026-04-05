@@ -102,7 +102,7 @@
 
 <!-- MODAL editar responsável -->
 <div id="cad-resp-modal-overlay" class="modal-overlay" style="z-index:700" onclick="if(event.target===this)fecharRespModal()">
-  <div class="modal-box" style="max-width:440px">
+  <div class="modal-box" style="max-width:480px">
     <div class="modal-header">
       <div><h2 style="font-size:1rem">👤 Editar Responsável</h2></div>
       <button class="modal-close" onclick="fecharRespModal()">✕</button>
@@ -111,18 +111,30 @@
       <input type="hidden" id="cad-resp-id">
       <div class="form-grid" style="gap:0.875rem">
         <div class="form-group full-width">
-          <label>E-mail</label>
-          <input type="text" id="cad-resp-email-display" disabled style="background:#f8fafc;color:#64748b">
-        </div>
-        <div class="form-group full-width">
           <label>Nome completo *</label>
           <input type="text" id="cad-resp-nome" placeholder="Nome do responsável">
+        </div>
+        <div class="form-group full-width">
+          <label>E-mail *</label>
+          <input type="email" id="cad-resp-email" placeholder="email@exemplo.com">
         </div>
         <div class="form-group full-width">
           <label>Telefone</label>
           <input type="text" id="cad-resp-telefone" placeholder="(00) 00000-0000">
         </div>
       </div>
+
+      <!-- Ações de acesso -->
+      <div style="margin-top:1rem;padding:0.875rem;background:#f8fafc;border-radius:0.5rem;border:1px solid var(--gray-light)">
+        <div style="font-size:0.8rem;font-weight:600;color:var(--navy-mid);margin-bottom:0.6rem">🔐 Acesso do responsável</div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+          <button class="btn btn-secondary btn-sm" onclick="enviarResetSenhaResp()">📧 Enviar link de redefinição</button>
+          <button class="btn btn-secondary btn-sm" onclick="copiarResetSenhaResp()">🔗 Copiar link de redefinição</button>
+          <button class="btn btn-secondary btn-sm" onclick="copiarLinkCadastro()">📋 Copiar link de cadastro</button>
+        </div>
+        <div id="cad-resp-link-feedback" style="font-size:0.75rem;color:#16a34a;margin-top:0.4rem;display:none"></div>
+      </div>
+
       <div id="cad-resp-alert" style="margin-top:0.75rem"></div>
       <div style="display:flex;justify-content:flex-end;gap:0.75rem;margin-top:1.25rem">
         <button class="btn btn-secondary" onclick="fecharRespModal()">Cancelar</button>
