@@ -1082,8 +1082,8 @@ function fecharModalClick(event) {
 // ============================================================
 //  ALUNOS INDIVIDUAIS
 // ============================================================
-const STATUS_ALUNO_LABEL = { pendente: 'Pendente', aprovado: 'Aprovado', reprovado: 'Reprovado' };
-const STATUS_ALUNO_CLS   = { pendente: 'status-pendente', aprovado: 'status-aprovado', reprovado: 'status-reprovado' };
+const STATUS_ALUNO_LABEL = { pendente: 'Pendente', aprovado: 'Aprovado', reprovado: 'Reprovado', matriculado: 'Matriculado' };
+const STATUS_ALUNO_CLS   = { pendente: 'status-pendente', aprovado: 'status-aprovado', reprovado: 'status-reprovado', matriculado: 'status-matriculado' };
 
 function renderAlunosDetalhe(alunos, interesseId) {
   if (!alunos.length) return '<p style="padding:1rem;color:var(--gray);font-size:0.85rem">Nenhum aluno cadastrado.</p>';
@@ -1120,6 +1120,7 @@ function renderAlunosDetalhe(alunos, interesseId) {
 
         <div id="aluno-acoes-${a.id}" style="display:flex;gap:0.5rem;flex-wrap:wrap">
           ${!aprovado ? `<button class="btn btn-success btn-sm" onclick="aprovarAluno('${a.id}','${interesseId}')">✅ Aprovar</button>` : ''}
+          ${aprovado ? `<button class="btn btn-primary btn-sm" onclick="confirmarMatriculaAluno('${a.id}','${interesseId}')">🎓 Matricular</button>` : ''}
           ${!reprovado ? `<button class="btn btn-danger btn-sm" onclick="abrirReprovacaoAluno('${a.id}','${interesseId}')">✕ Reprovar</button>` : ''}
           ${(aprovado || reprovado) ? `<button class="btn btn-secondary btn-sm" onclick="resetarAluno('${a.id}','${interesseId}')">↩ Desfazer</button>` : ''}
         </div>
@@ -1133,6 +1134,62 @@ function renderAlunosDetalhe(alunos, interesseId) {
         </div>
       </div>`;
   }).join('');
+}
+
+async function confirmarMatriculaAluno(alunoId, interesseId) {
+  const sol   = todasSolicitacoes.find(s => s.id === interesseId);
+  const aluno = sol?.alunos?.find(a => a.id === alunoId);
+  if (!aluno) return;
+
+  const alocacao  = aluno.alocacoes?.[0];
+  const turmaInfo = alocacao?.turmas
+    ? `${alocacao.turmas.serie} – ${alocacao.turmas.nome_turma} (${TURNO_LABEL_FULL[alocacao.turmas.turno] || alocacao.turmas.turno})`
+    : null;
+
+  const nomeColaborador = document.getElementById('sidebar-nome').textContent.trim() || 'Colaborador';
+  const txtTurma = turmaInfo ? `\n\nTurma: ${turmaInfo}` : '';
+  const nota = FRASES_STATUS['matriculado'] + txtTurma;
+
+  const { isConfirmed } = await Swal.fire({
+    title: '🎓 Confirmar matrícula?',
+    html: `<p style="font-size:0.875rem">Confirmar matrícula de <strong>${escapeHtml(aluno.nome_aluno)}</strong>?</p>
+           ${turmaInfo ? `<p style="font-size:0.82rem;color:#0e7490;margin-top:0.4rem">🏫 Turma: ${escapeHtml(turmaInfo)}</p>` : ''}`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: '🎓 Confirmar matrícula',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#0e7490'
+  });
+  if (!isConfirmed) return;
+
+  // Verifica se todos os alunos da solicitação estão matriculados após esta ação
+  const todosAlunos   = sol?.alunos || [];
+  const outrosNaoMatr = todosAlunos.filter(a => a.id !== alunoId && a.status_aluno !== 'matriculado');
+
+  // Atualiza o status do aluno para matriculado
+  const { error } = await cliente.from('alunos')
+    .update({ status_aluno: 'matriculado' })
+    .eq('id', alunoId);
+  if (error) { showToast('❌ Erro: ' + error.message); return; }
+
+  aluno.status_aluno = 'matriculado';
+
+  // Se todos os alunos agora estão matriculados, muda a solicitação para matriculado
+  if (outrosNaoMatr.length === 0) {
+    await cliente.from('interesse_vagas').update({ status: 'matriculado' }).eq('id', interesseId);
+    if (sol) sol.status = 'matriculado';
+    await registrarHistorico(interesseId, nota, nomeColaborador);
+    await registrarLog('matricular_aluno', 'alunos', alunoId, `${aluno.nome_aluno} matriculado — solicitação concluída`);
+    showToast('🎓 Matrícula confirmada! Todos os alunos matriculados.');
+  } else {
+    await registrarHistorico(interesseId, `Aluno ${aluno.nome_aluno} matriculado.${txtTurma}`, nomeColaborador);
+    await registrarLog('matricular_aluno', 'alunos', alunoId, `${aluno.nome_aluno} matriculado individualmente`);
+    showToast(`🎓 ${aluno.nome_aluno} matriculado!`);
+  }
+
+  await carregarSolicitacoes();
+  await carregarStats();
+  abrirModal(interesseId);
 }
 
 async function aprovarAluno(alunoId, interesseId) {
@@ -1305,6 +1362,9 @@ function atualizarUltimaNota(h) {
 //  ATUALIZAR STATUS
 // ============================================================
 function gerarBotoesStatus(status, id) {
+  const sol     = todasSolicitacoes.find(s => s.id === id);
+  const nAlunos = (sol?.alunos || []).length;
+
   const acoes = {
     pendente:   [
       { s: 'em_analise', label: '🔍 Em Análise', cls: 'btn-secondary' },
@@ -1312,11 +1372,13 @@ function gerarBotoesStatus(status, id) {
     ],
     em_analise: [
       { s: 'pendente',   label: '↩ Pendente',   cls: 'btn-secondary' },
-      { s: 'aprovado',   label: '✅ Aprovar',    cls: 'btn-success'   },
+      // Aprovar na solicitação só quando 1 aluno; com múltiplos, aprovar individualmente
+      ...(nAlunos <= 1 ? [{ s: 'aprovado', label: '✅ Aprovar', cls: 'btn-success' }] : []),
       { s: 'reprovado',  label: '✕ Reprovar',   cls: 'btn-danger'    }
     ],
     aprovado:    [
-      { s: 'matriculado', label: '🎓 Matricular', cls: 'btn-primary'   },
+      // Matricular na solicitação só quando 1 aluno; com múltiplos, matricular individualmente
+      ...(nAlunos <= 1 ? [{ s: 'matriculado', label: '🎓 Matricular', cls: 'btn-primary' }] : []),
       { s: 'cancelado',   label: '🚫 Cancelar',   cls: 'btn-danger'    }
     ],
     matriculado: [
