@@ -2343,14 +2343,29 @@ async function carregarResponsaveis() {
   document.getElementById('cad-resp-lista').innerHTML =
     `<div class="empty-state" style="padding:1.5rem"><span class="empty-icon">⏳</span><p>Carregando...</p></div>`;
 
-  const [{ data: users }, { data: solics }] = await Promise.all([
+  const [{ data: users }, { data: solics }, { data: alunos }] = await Promise.all([
     cliente.from('usuarios').select('id, nome, email, telefone, created_at').order('nome'),
-    cliente.from('interesse_vagas').select('id, usuario_id, status')
+    cliente.from('interesse_vagas').select('id, usuario_id'),
+    cliente.from('alunos').select('id, nome_aluno, segmento, turma, interesse_id')
   ]);
+
+  // mapa interesse_id → usuario_id
+  const solicsMap = {};
+  (solics || []).forEach(s => { solicsMap[s.id] = s.usuario_id; });
+
+  // mapa usuario_id → [alunos]
+  const alunosPorResp = {};
+  (alunos || []).forEach(a => {
+    const uid = solicsMap[a.interesse_id];
+    if (!uid) return;
+    if (!alunosPorResp[uid]) alunosPorResp[uid] = [];
+    alunosPorResp[uid].push(a);
+  });
 
   _todosResponsaveis = (users || []).map(u => ({
     ...u,
-    total_solics: (solics || []).filter(s => s.usuario_id === u.id).length
+    total_solics: (solics || []).filter(s => s.usuario_id === u.id).length,
+    alunos:       alunosPorResp[u.id] || []
   }));
 
   filtrarResponsaveis();
@@ -2359,7 +2374,10 @@ async function carregarResponsaveis() {
 function filtrarResponsaveis() {
   const busca = (document.getElementById('cad-resp-busca')?.value || '').toLowerCase().trim();
   const lista = busca
-    ? _todosResponsaveis.filter(u => (u.nome + u.email).toLowerCase().includes(busca))
+    ? _todosResponsaveis.filter(u =>
+        (u.nome + u.email).toLowerCase().includes(busca) ||
+        u.alunos.some(a => a.nome_aluno.toLowerCase().includes(busca))
+      )
     : _todosResponsaveis;
 
   document.getElementById('cad-resp-count').textContent =
@@ -2374,22 +2392,34 @@ function renderResponsaveis(lista) {
     return;
   }
   container.innerHTML = lista.map(u => {
-    const data = new Date(u.created_at).toLocaleDateString('pt-BR');
+    const data     = new Date(u.created_at).toLocaleDateString('pt-BR');
+    const nAlunos  = u.alunos.length;
+    const alunosHtml = nAlunos
+      ? u.alunos.map(a =>
+          `<span style="display:inline-flex;align-items:center;gap:0.3rem;background:#f1f5f9;border-radius:0.4rem;padding:0.2rem 0.5rem;font-size:0.75rem;color:#475569">
+            🎒 ${escapeHtml(a.nome_aluno)}${a.turma ? ` · ${escapeHtml(a.turma)}` : ''}
+          </span>`
+        ).join('')
+      : `<span style="font-size:0.75rem;color:#94a3b8">Nenhum aluno cadastrado</span>`;
+
     return `
-      <div style="display:flex;align-items:center;padding:0.75rem 0;border-bottom:1px solid var(--gray-light);gap:1rem;flex-wrap:wrap">
-        <div style="flex:1;min-width:160px">
-          <div style="font-weight:600;font-size:0.875rem">${escapeHtml(u.nome || '–')}</div>
-          <div style="font-size:0.775rem;color:var(--gray-dark);overflow-wrap:break-word;word-break:break-all">${escapeHtml(u.email || '–')}</div>
-          <div style="font-size:0.75rem;color:#94a3b8">${escapeHtml(u.telefone || 'Sem telefone')} · Cadastrado em ${data}</div>
+      <div style="padding:0.875rem 0;border-bottom:1px solid var(--gray-light)">
+        <div style="display:flex;align-items:flex-start;gap:1rem;flex-wrap:wrap">
+          <div style="flex:1;min-width:160px">
+            <div style="font-weight:600;font-size:0.875rem">${escapeHtml(u.nome || '–')}</div>
+            <div style="font-size:0.775rem;color:var(--gray-dark);overflow-wrap:break-word;word-break:break-all">${escapeHtml(u.email || '–')}</div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:0.15rem">${escapeHtml(u.telefone || 'Sem telefone')} · Cadastrado em ${data}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.75rem;flex-shrink:0">
+            <span style="font-size:0.78rem;color:var(--gray-dark)">
+              📋 ${u.total_solics} solic. · 🎒 ${nAlunos} aluno${nAlunos !== 1 ? 's' : ''}
+            </span>
+            <button class="btn btn-secondary btn-sm" onclick="abrirEditarResponsavel('${u.id}')">✏️ Editar</button>
+            <button class="btn btn-sm" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;border-radius:0.5rem;font-size:0.78rem;padding:0.3rem 0.75rem"
+              onclick="excluirResponsavel('${u.id}','${escapeHtml(u.nome)}',${u.total_solics},${nAlunos})">🗑️ Excluir</button>
+          </div>
         </div>
-        <div style="font-size:0.78rem;color:var(--gray-dark);white-space:nowrap">
-          📋 ${u.total_solics} solicitaç${u.total_solics !== 1 ? 'ões' : 'ão'}
-        </div>
-        <div style="display:flex;gap:0.5rem">
-          <button class="btn btn-secondary btn-sm" onclick="abrirEditarResponsavel('${u.id}')">✏️ Editar</button>
-          <button class="btn btn-sm" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;border-radius:0.5rem;font-size:0.78rem;padding:0.3rem 0.75rem"
-            onclick="excluirResponsavel('${u.id}','${escapeHtml(u.nome)}')">🗑️ Excluir</button>
-        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.5rem">${alunosHtml}</div>
       </div>`;
   }).join('');
 }
@@ -2433,14 +2463,22 @@ async function salvarResponsavel() {
   carregarResponsaveis();
 }
 
-async function excluirResponsavel(id, nome) {
+async function excluirResponsavel(id, nome, nSolics, nAlunos) {
+  const detalhes = [];
+  if (nSolics > 0) detalhes.push(`<strong>${nSolics}</strong> solicitaç${nSolics !== 1 ? 'ões' : 'ão'}`);
+  if (nAlunos > 0) detalhes.push(`<strong>${nAlunos}</strong> aluno${nAlunos !== 1 ? 's' : ''}`);
+  const detalheStr = detalhes.length
+    ? `<p style="font-size:0.85rem;color:#475569;margin-top:0.4rem">Serão removidos também: ${detalhes.join(' e ')}.</p>`
+    : '';
+
   const { isConfirmed } = await Swal.fire({
     title: 'Excluir responsável?',
-    html: `<p>Isso irá excluir <strong>${escapeHtml(nome)}</strong> e todas as suas solicitações e alunos vinculados.</p>
-           <p style="color:#b91c1c;font-size:0.85rem;margin-top:0.5rem">Esta ação é irreversível.</p>`,
+    html: `<p>Excluir <strong>${escapeHtml(nome)}</strong> permanentemente?</p>
+           ${detalheStr}
+           <p style="color:#b91c1c;font-size:0.82rem;margin-top:0.5rem">Esta ação é irreversível.</p>`,
     icon: 'warning',
     showCancelButton: true,
-    confirmButtonText: 'Sim, excluir',
+    confirmButtonText: 'Sim, excluir tudo',
     cancelButtonText: 'Cancelar',
     confirmButtonColor: '#dc2626'
   });
@@ -2449,8 +2487,9 @@ async function excluirResponsavel(id, nome) {
   const { error } = await cliente.from('usuarios').delete().eq('id', id);
   if (error) { showToast('❌ Erro ao excluir: ' + error.message); return; }
 
-  await registrarLog('excluir_responsavel', 'usuarios', id, `Responsável ${nome} excluído`);
-  showToast('✅ Responsável excluído.');
+  await registrarLog('excluir_responsavel', 'usuarios', id,
+    `Responsável ${nome} excluído (${nSolics} solicitações, ${nAlunos} alunos)`);
+  showToast('✅ Responsável e dados vinculados excluídos.');
   _todosResponsaveis = _todosResponsaveis.filter(r => r.id !== id);
   filtrarResponsaveis();
 }
@@ -2529,7 +2568,7 @@ function renderAlunosCad(lista) {
         <div style="display:flex;gap:0.5rem">
           <button class="btn btn-secondary btn-sm" onclick="abrirEditarAluno('${a.id}')">✏️ Editar</button>
           <button class="btn btn-sm" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;border-radius:0.5rem;font-size:0.78rem;padding:0.3rem 0.75rem"
-            onclick="excluirAluno('${a.id}','${escapeHtml(a.nome_aluno)}')">🗑️ Excluir</button>
+            onclick="excluirAluno('${a.id}','${escapeHtml(a.nome_aluno)}','${escapeHtml(respNome)}')">🗑️ Excluir</button>
         </div>
       </div>`;
   }).join('');
@@ -2589,10 +2628,16 @@ async function salvarAluno() {
   carregarAlunosCad();
 }
 
-async function excluirAluno(id, nome) {
+async function excluirAluno(id, nome, respNome) {
+  const vinculo = respNome && respNome !== '–'
+    ? `<p style="font-size:0.82rem;color:#475569;margin-top:0.4rem">Vinculado ao responsável: <strong>${escapeHtml(respNome)}</strong>. A solicitação desse responsável permanece — apenas este aluno será removido.</p>`
+    : '';
+
   const { isConfirmed } = await Swal.fire({
     title: 'Excluir aluno?',
-    html: `<p>Isso irá excluir <strong>${escapeHtml(nome)}</strong> permanentemente, incluindo sua alocação de turma caso exista.</p>`,
+    html: `<p>Excluir <strong>${escapeHtml(nome)}</strong> permanentemente?</p>
+           ${vinculo}
+           <p style="font-size:0.82rem;color:#94a3b8;margin-top:0.4rem">A alocação de turma, se existir, também será removida.</p>`,
     icon: 'warning',
     showCancelButton: true,
     confirmButtonText: 'Sim, excluir',
