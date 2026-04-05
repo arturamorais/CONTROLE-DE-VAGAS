@@ -1121,10 +1121,14 @@ function renderAlunosDetalhe(alunos, interesseId) {
           </div>` : ''}
 
         <div id="aluno-acoes-${a.id}" style="display:flex;gap:0.5rem;flex-wrap:wrap">
-          ${!aprovado ? `<button class="btn btn-success btn-sm" onclick="aprovarAluno('${a.id}','${interesseId}')">✅ Aprovar</button>` : ''}
-          ${aprovado ? `<button class="btn btn-primary btn-sm" onclick="confirmarMatriculaAluno('${a.id}','${interesseId}')">🎓 Matricular</button>` : ''}
-          ${!reprovado ? `<button class="btn btn-danger btn-sm" onclick="abrirReprovacaoAluno('${a.id}','${interesseId}')">✕ Reprovar</button>` : ''}
-          ${(aprovado || reprovado) ? `<button class="btn btn-secondary btn-sm" onclick="resetarAluno('${a.id}','${interesseId}')">↩ Desfazer</button>` : ''}
+          ${statusAluno === 'matriculado' ? `
+            <span style="font-size:0.78rem;color:#0e7490;font-style:italic">✔ Matriculado — para reverter, cancele a solicitação.</span>
+          ` : `
+            ${!aprovado ? `<button class="btn btn-success btn-sm" onclick="aprovarAluno('${a.id}','${interesseId}')">✅ Aprovar</button>` : ''}
+            ${aprovado ? `<button class="btn btn-primary btn-sm" onclick="confirmarMatriculaAluno('${a.id}','${interesseId}')">🎓 Matricular</button>` : ''}
+            ${!reprovado ? `<button class="btn btn-danger btn-sm" onclick="abrirReprovacaoAluno('${a.id}','${interesseId}')">✕ Reprovar</button>` : ''}
+            ${(aprovado || reprovado) ? `<button class="btn btn-secondary btn-sm" onclick="resetarAluno('${a.id}','${interesseId}')">↩ Desfazer</button>` : ''}
+          `}
         </div>
 
         <div id="form-reprovacao-${a.id}" style="display:none;flex-direction:column;gap:0.5rem">
@@ -1442,7 +1446,7 @@ const ACAO_CONFIG = {
   reprovado:   { titulo: '✕ Reprovar solicitação',       cor: '#dc2626', bg: '#fee2e2', border: '#fecaca', texto: 'Ao confirmar, o status será alterado para Reprovado e a nota abaixo será registrada no histórico.' },
   em_analise:  { titulo: '🔍 Colocar em Análise',        cor: '#1e40af', bg: '#eff6ff', border: '#bfdbfe', texto: 'Ao confirmar, o status será alterado para Em Análise e a nota abaixo será registrada no histórico.' },
   pendente:    { titulo: '↩ Voltar para Pendente',       cor: '#b45309', bg: '#fef3c7', border: '#fde68a', texto: 'Ao confirmar, o status será alterado para Pendente e a nota abaixo será registrada no histórico.' },
-  cancelado:   { titulo: '🚫 Cancelar solicitação',      cor: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', texto: 'Atenção: esta ação cancela uma solicitação já aprovada. A nota abaixo será registrada no histórico.' },
+  cancelado:   { titulo: '🚫 Cancelar solicitação',      cor: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', texto: 'Atenção: esta ação cancela uma solicitação já aprovada ou matriculada. O motivo é obrigatório e será registrado no histórico.', obrigatorio: true },
   matriculado: { titulo: '🎓 Confirmar Matrícula',       cor: '#0e7490', bg: '#ecfeff', border: '#a5f3fc', texto: 'Ao confirmar, a matrícula será registrada. O responsável será informado sobre a turma e a possibilidade de ajuste pedagógico.' }
 };
 
@@ -1600,6 +1604,17 @@ function fecharAcaoModalClick(event) {
 async function executarAtualizacaoStatus(id, novoStatus) {
   const btn  = document.getElementById('btn-confirmar-acao');
   const nota = document.getElementById('acao-modal-textarea').value.trim();
+
+  const cfg = ACAO_CONFIG[novoStatus] || {};
+  if (cfg.obrigatorio && !nota) {
+    const alertEl = document.getElementById('acao-modal-alerta');
+    alertEl.textContent   = '⚠️ O motivo é obrigatório para cancelar. Preencha o campo acima.';
+    alertEl.style.background = '#fee2e2';
+    alertEl.style.border     = '1px solid #fecaca';
+    alertEl.style.color      = '#b91c1c';
+    document.getElementById('acao-modal-textarea').focus();
+    return;
+  }
 
   const solAtual       = todasSolicitacoes.find(s => s.id === id);
   const statusAnterior = STATUS_LABEL[solAtual?.status] || '–';
