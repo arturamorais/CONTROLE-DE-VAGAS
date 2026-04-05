@@ -2404,11 +2404,21 @@ async function carregarResponsaveis() {
   document.getElementById('cad-resp-lista').innerHTML =
     `<div class="empty-state" style="padding:1.5rem"><span class="empty-icon">⏳</span><p>Carregando...</p></div>`;
 
-  const [{ data: users }, { data: solics }, { data: alunos }] = await Promise.all([
+  const [
+    { data: users,  error: errUsers },
+    { data: solics, error: errSolics },
+    { data: alunos, error: errAlunos }
+  ] = await Promise.all([
     cliente.from('usuarios').select('id, nome, email, telefone, created_at').order('nome'),
     cliente.from('interesse_vagas').select('id, usuario_id'),
     cliente.from('alunos').select('id, nome_aluno, segmento, turma, interesse_id')
   ]);
+
+  if (errUsers) {
+    document.getElementById('cad-resp-lista').innerHTML =
+      `<div class="alert alert-error">Erro ao carregar responsáveis: ${errUsers.message}</div>`;
+    return;
+  }
 
   // mapa interesse_id → usuario_id
   const solicsMap = {};
