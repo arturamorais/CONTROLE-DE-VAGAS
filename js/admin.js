@@ -1463,18 +1463,33 @@ async function pedirConfirmacaoAlunos(alunos, novoStatusAluno) {
   return isConfirmed;
 }
 
+// Mapeia status da solicitação → status que os alunos devem ter
+// matriculado = null → não altera o status dos alunos
+function _statusAlunoParaSolic(novoStatus) {
+  const mapa = {
+    aprovado:   'aprovado',
+    reprovado:  'reprovado',
+    pendente:   'pendente',
+    em_analise: 'pendente',
+    cancelado:  'pendente',
+    matriculado: null        // não altera alunos
+  };
+  return mapa[novoStatus] ?? 'pendente';
+}
+
 async function executarStatusDireto(id, novoStatus) {
   const solAtual       = todasSolicitacoes.find(s => s.id === id);
   const statusAnterior = STATUS_LABEL[solAtual?.status] || '–';
-  const alunos         = solAtual?.alunos || [];
+  const todosAlunos    = solAtual?.alunos || [];
+  const statusAluno    = _statusAlunoParaSolic(novoStatus);
 
-  const statusAluno = novoStatus === 'aprovado' ? 'aprovado'
-                    : novoStatus === 'reprovado' ? 'reprovado'
-                    : 'pendente';
+  // Só mostra modal e atualiza alunos cujo status vai de fato mudar
+  const alunosAfetados = statusAluno !== null
+    ? todosAlunos.filter(a => a.status_aluno !== statusAluno)
+    : [];
 
-  // Confirmação de atualização em massa dos alunos
-  if (alunos.length > 0) {
-    const confirmar = await pedirConfirmacaoAlunos(alunos, statusAluno);
+  if (alunosAfetados.length > 0) {
+    const confirmar = await pedirConfirmacaoAlunos(alunosAfetados, statusAluno);
     if (!confirmar) return;
   }
 
@@ -1489,8 +1504,11 @@ async function executarStatusDireto(id, novoStatus) {
 
   const nomeColaborador = document.getElementById('sidebar-nome').textContent.trim() || 'Colaborador';
 
-  await cliente.from('alunos').update({ status_aluno: statusAluno, motivo_reprovacao: null }).eq('interesse_id', id);
-  if (solAtual?.alunos) solAtual.alunos.forEach(a => { a.status_aluno = statusAluno; a.motivo_reprovacao = null; });
+  if (statusAluno !== null && alunosAfetados.length > 0) {
+    await cliente.from('alunos').update({ status_aluno: statusAluno, motivo_reprovacao: null })
+      .in('id', alunosAfetados.map(a => a.id));
+    alunosAfetados.forEach(a => { a.status_aluno = statusAluno; a.motivo_reprovacao = null; });
+  }
 
   await registrarHistorico(id, `Status alterado de "${statusAnterior}" para "${STATUS_LABEL[novoStatus]}"`, nomeColaborador);
 
@@ -1501,7 +1519,7 @@ async function executarStatusDireto(id, novoStatus) {
 
   if (solAtual) solAtual.status = novoStatus;
   fecharModal();
-  showToast(`✅ Solicitação aprovada!`);
+  showToast(`✅ Status: ${STATUS_LABEL[novoStatus]}`);
   await carregarSolicitacoes();
   await carregarStats();
   await carregarUltimasSolicitacoes();
@@ -1521,15 +1539,16 @@ async function executarAtualizacaoStatus(id, novoStatus) {
 
   const solAtual       = todasSolicitacoes.find(s => s.id === id);
   const statusAnterior = STATUS_LABEL[solAtual?.status] || '–';
-  const alunos         = solAtual?.alunos || [];
+  const todosAlunos    = solAtual?.alunos || [];
+  const statusAluno    = _statusAlunoParaSolic(novoStatus);
 
-  const statusAluno = novoStatus === 'aprovado' ? 'aprovado'
-                    : novoStatus === 'reprovado' ? 'reprovado'
-                    : 'pendente';
+  // Só mostra modal e atualiza alunos cujo status vai de fato mudar
+  const alunosAfetados = statusAluno !== null
+    ? todosAlunos.filter(a => a.status_aluno !== statusAluno)
+    : [];
 
-  // Confirmação de atualização em massa dos alunos (antes de salvar)
-  if (alunos.length > 0) {
-    const confirmar = await pedirConfirmacaoAlunos(alunos, statusAluno);
+  if (alunosAfetados.length > 0) {
+    const confirmar = await pedirConfirmacaoAlunos(alunosAfetados, statusAluno);
     if (!confirmar) return;
   }
 
@@ -1550,9 +1569,12 @@ async function executarAtualizacaoStatus(id, novoStatus) {
 
   const nomeColaborador = document.getElementById('sidebar-nome').textContent.trim() || 'Colaborador';
 
-  // Propaga o novo status para todos os alunos da solicitação
-  await cliente.from('alunos').update({ status_aluno: statusAluno, motivo_reprovacao: null }).eq('interesse_id', id);
-  if (solAtual?.alunos) solAtual.alunos.forEach(a => { a.status_aluno = statusAluno; a.motivo_reprovacao = null; });
+  // Propaga o novo status apenas para alunos que realmente precisam mudar
+  if (statusAluno !== null && alunosAfetados.length > 0) {
+    await cliente.from('alunos').update({ status_aluno: statusAluno, motivo_reprovacao: null })
+      .in('id', alunosAfetados.map(a => a.id));
+    alunosAfetados.forEach(a => { a.status_aluno = statusAluno; a.motivo_reprovacao = null; });
+  }
 
   // Registra mudança de status no histórico
   await registrarHistorico(id, `Status alterado de "${statusAnterior}" para "${STATUS_LABEL[novoStatus]}"`, nomeColaborador);
