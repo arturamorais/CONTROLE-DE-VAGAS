@@ -2409,7 +2409,7 @@ async function carregarResponsaveis() {
     { data: solics, error: errSolics },
     { data: alunos, error: errAlunos }
   ] = await Promise.all([
-    cliente.from('usuarios').select('id, nome, email, telefone, created_at').order('nome'),
+    cliente.from('usuarios').select('id, nome, email, telefone, criado_em').order('nome'),
     cliente.from('interesse_vagas').select('id, usuario_id'),
     cliente.from('alunos').select('id, nome_aluno, segmento, turma, interesse_id')
   ]);
@@ -2463,7 +2463,7 @@ function renderResponsaveis(lista) {
     return;
   }
   container.innerHTML = lista.map(u => {
-    const data     = new Date(u.created_at).toLocaleDateString('pt-BR');
+    const data     = u.criado_em ? new Date(u.criado_em).toLocaleDateString('pt-BR') : '–';
     const nAlunos  = u.alunos.length;
     const alunosHtml = nAlunos
       ? u.alunos.map(a =>
