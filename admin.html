@@ -78,6 +78,92 @@
   </div>
 </div>
 
+<!-- MODAL editar responsável -->
+<div id="cad-resp-modal-overlay" class="modal-overlay" style="z-index:700" onclick="if(event.target===this)fecharRespModal()">
+  <div class="modal-box" style="max-width:440px">
+    <div class="modal-header">
+      <div><h2 style="font-size:1rem">👤 Editar Responsável</h2></div>
+      <button class="modal-close" onclick="fecharRespModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="cad-resp-id">
+      <div class="form-grid" style="gap:0.875rem">
+        <div class="form-group full-width">
+          <label>E-mail</label>
+          <input type="text" id="cad-resp-email-display" disabled style="background:#f8fafc;color:#64748b">
+        </div>
+        <div class="form-group full-width">
+          <label>Nome completo *</label>
+          <input type="text" id="cad-resp-nome" placeholder="Nome do responsável">
+        </div>
+        <div class="form-group full-width">
+          <label>Telefone</label>
+          <input type="text" id="cad-resp-telefone" placeholder="(00) 00000-0000">
+        </div>
+      </div>
+      <div id="cad-resp-alert" style="margin-top:0.75rem"></div>
+      <div style="display:flex;justify-content:flex-end;gap:0.75rem;margin-top:1.25rem">
+        <button class="btn btn-secondary" onclick="fecharRespModal()">Cancelar</button>
+        <button class="btn btn-primary" id="btn-salvar-resp" onclick="salvarResponsavel()">💾 Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL editar aluno -->
+<div id="cad-aluno-modal-overlay" class="modal-overlay" style="z-index:700" onclick="if(event.target===this)fecharAlunoModal()">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-header">
+      <div><h2 style="font-size:1rem">🎒 Editar Aluno</h2></div>
+      <button class="modal-close" onclick="fecharAlunoModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="cad-aluno-id">
+      <div class="form-grid" style="gap:0.875rem">
+        <div class="form-group full-width">
+          <label>Nome do aluno *</label>
+          <input type="text" id="cad-aluno-nome" placeholder="Nome completo do aluno">
+        </div>
+        <div class="form-group full-width">
+          <label>Segmento</label>
+          <select id="cad-aluno-segmento" onchange="atualizarSeriesCad()">
+            <option value="">Selecione</option>
+            <option value="educacao_infantil">Educação Infantil</option>
+            <option value="fundamental1">Fundamental 1</option>
+            <option value="fundamental2">Fundamental 2</option>
+            <option value="ensino_medio">Ensino Médio</option>
+          </select>
+        </div>
+        <div class="form-group full-width">
+          <label>Série</label>
+          <select id="cad-aluno-serie"></select>
+        </div>
+        <div class="form-group full-width">
+          <label>Turno</label>
+          <select id="cad-aluno-turno">
+            <option value="manha">Manhã</option>
+            <option value="tarde">Tarde</option>
+            <option value="tanto_faz">Tanto faz</option>
+          </select>
+        </div>
+        <div class="form-group full-width">
+          <label>Status do aluno</label>
+          <select id="cad-aluno-status">
+            <option value="pendente">Pendente</option>
+            <option value="aprovado">Aprovado</option>
+            <option value="reprovado">Reprovado</option>
+          </select>
+        </div>
+      </div>
+      <div id="cad-aluno-alert" style="margin-top:0.75rem"></div>
+      <div style="display:flex;justify-content:flex-end;gap:0.75rem;margin-top:1.25rem">
+        <button class="btn btn-secondary" onclick="fecharAlunoModal()">Cancelar</button>
+        <button class="btn btn-primary" id="btn-salvar-aluno" onclick="salvarAluno()">💾 Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL de turma -->
 <div id="turma-modal-overlay" class="modal-overlay" style="z-index:700" onclick="fecharTurmaModalClick(event)">
   <div class="modal-box" style="max-width:480px">
@@ -251,6 +337,10 @@
       <button class="nav-item" onclick="showSection('enturmar')" data-section="enturmar">
         <span class="nav-icon">🏫</span>
         <span class="nav-text">Enturmar</span>
+      </button>
+      <button class="nav-item" id="nav-cadastros" style="display:none" onclick="showSection('cadastros')" data-section="cadastros">
+        <span class="nav-icon">📁</span>
+        <span class="nav-text">Cadastros</span>
       </button>
       <button class="nav-item" id="nav-relatorios" style="display:none" onclick="showSection('relatorios')" data-section="relatorios">
         <span class="nav-icon">📈</span>
@@ -659,6 +749,66 @@
 
       <!-- Timeline de atividade -->
       <div id="logs-timeline"></div>
+    </div>
+
+    <!-- ======= SEÇÃO: CADASTROS ======= -->
+    <div id="section-cadastros" class="section">
+      <div class="section-header">
+        <h1>Cadastros</h1>
+        <p>Visualize e gerencie responsáveis e alunos cadastrados</p>
+      </div>
+
+      <!-- Tabs -->
+      <div style="display:flex;gap:0.5rem;margin-bottom:1.25rem;border-bottom:2px solid var(--gray-light);padding-bottom:0">
+        <button id="tab-responsaveis" class="btn btn-secondary btn-sm"
+          style="border-radius:0.5rem 0.5rem 0 0;border-bottom:2px solid var(--primary);font-weight:700;color:var(--primary);background:#fff"
+          onclick="switchCadTab('responsaveis')">👤 Responsáveis</button>
+        <button id="tab-alunos" class="btn btn-secondary btn-sm"
+          style="border-radius:0.5rem 0.5rem 0 0;border-bottom:none"
+          onclick="switchCadTab('alunos')">🎒 Alunos</button>
+      </div>
+
+      <!-- Painel Responsáveis -->
+      <div id="cad-panel-responsaveis">
+        <div class="card">
+          <div class="card-title" style="justify-content:space-between;align-items:center">
+            <span>👤 Responsáveis Cadastrados</span>
+            <input type="text" id="cad-resp-busca" placeholder="🔍 Buscar nome ou e-mail..."
+              oninput="filtrarResponsaveis()"
+              style="font-size:0.8rem;padding:0.4rem 0.75rem;border:1px solid var(--gray-light);border-radius:0.5rem;width:220px">
+          </div>
+          <div id="cad-resp-count" style="font-size:0.78rem;color:var(--gray-dark);margin-bottom:0.75rem"></div>
+          <div id="cad-resp-lista">
+            <div class="empty-state" style="padding:1.5rem"><span class="empty-icon">⏳</span><p>Carregando...</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Painel Alunos -->
+      <div id="cad-panel-alunos" style="display:none">
+        <div class="card">
+          <div class="card-title" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem">
+            <span>🎒 Alunos Cadastrados</span>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+              <input type="text" id="cad-aluno-busca" placeholder="🔍 Buscar nome..."
+                oninput="filtrarAlunosCad()"
+                style="font-size:0.8rem;padding:0.4rem 0.75rem;border:1px solid var(--gray-light);border-radius:0.5rem;width:180px">
+              <select id="cad-aluno-seg" onchange="filtrarAlunosCad()"
+                style="font-size:0.8rem;padding:0.4rem 0.6rem;border:1px solid var(--gray-light);border-radius:0.5rem">
+                <option value="">Todos os segmentos</option>
+                <option value="educacao_infantil">Ed. Infantil</option>
+                <option value="fundamental1">Fund. 1</option>
+                <option value="fundamental2">Fund. 2</option>
+                <option value="ensino_medio">Ensino Médio</option>
+              </select>
+            </div>
+          </div>
+          <div id="cad-aluno-count" style="font-size:0.78rem;color:var(--gray-dark);margin-bottom:0.75rem"></div>
+          <div id="cad-aluno-lista">
+            <div class="empty-state" style="padding:1.5rem"><span class="empty-icon">⏳</span><p>Carregando...</p></div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- ======= SEÇÃO: DADOS ======= -->

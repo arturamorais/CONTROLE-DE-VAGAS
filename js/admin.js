@@ -44,8 +44,8 @@ const CARGO_LABEL = {
 
 // Permissões por cargo
 const PERMISSOES = {
-  master:      ['overview','solicitacoes','enturmar','relatorios','logs','dados','colaboradores','perfil'],
-  admin:       ['overview','solicitacoes','enturmar','relatorios','colaboradores','perfil'],
+  master:      ['overview','solicitacoes','enturmar','cadastros','relatorios','logs','dados','colaboradores','perfil'],
+  admin:       ['overview','solicitacoes','enturmar','cadastros','relatorios','colaboradores','perfil'],
   colaborador: ['overview','solicitacoes','enturmar','perfil']
 };
 
@@ -149,7 +149,7 @@ async function init() {
 
   // Revelar itens do nav conforme permissões do cargo
   const permitido = PERMISSOES[colab.cargo] || PERMISSOES['colaborador'];
-  ['relatorios','logs','dados','colaboradores'].forEach(sec => {
+  ['cadastros','relatorios','logs','dados','colaboradores'].forEach(sec => {
     const el = document.getElementById('nav-' + sec);
     if (el) el.style.display = permitido.includes(sec) ? '' : 'none';
   });
@@ -601,6 +601,7 @@ function showSection(name) {
     'overview':       'Início',
     'solicitacoes':   'Solicitações',
     'enturmar':       'Enturmar',
+    'cadastros':      'Cadastros',
     'relatorios':     'Relatórios',
     'logs':           'Atividade',
     'colaboradores':  'Colaboradores',
@@ -614,6 +615,7 @@ function showSection(name) {
     carregarSolicitacoes();
   }
   if (name === 'enturmar')      carregarEnturmar();
+  if (name === 'cadastros')     carregarCadastros();
   if (name === 'relatorios')    carregarRelatorios();
   if (name === 'logs')          carregarLogs();
   if (name === 'colaboradores') carregarColaboradores();
@@ -2300,6 +2302,302 @@ async function carregarRelatorios() {
       scales: { x: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f1f5f9' } }, y: { grid: { display: false }, ticks: { font: { size: 11 } } } }
     }
   });
+}
+
+// ============================================================
+//  CADASTROS — RESPONSÁVEIS E ALUNOS
+// ============================================================
+let _todosResponsaveis = [];
+let _todosAlunosCad    = [];
+
+function carregarCadastros() {
+  const tab = document.getElementById('tab-responsaveis');
+  if (tab?.style.fontWeight === '700') {
+    carregarResponsaveis();
+  } else {
+    switchCadTab('responsaveis');
+  }
+}
+
+function switchCadTab(tab) {
+  const isResp = tab === 'responsaveis';
+  document.getElementById('cad-panel-responsaveis').style.display = isResp ? '' : 'none';
+  document.getElementById('cad-panel-alunos').style.display       = isResp ? 'none' : '';
+
+  const tResp  = document.getElementById('tab-responsaveis');
+  const tAluno = document.getElementById('tab-alunos');
+  tResp.style.fontWeight    = isResp ? '700' : '500';
+  tResp.style.color         = isResp ? 'var(--primary)' : '';
+  tResp.style.borderBottom  = isResp ? '2px solid var(--primary)' : 'none';
+  tResp.style.background    = isResp ? '#fff' : '';
+  tAluno.style.fontWeight   = !isResp ? '700' : '500';
+  tAluno.style.color        = !isResp ? 'var(--primary)' : '';
+  tAluno.style.borderBottom = !isResp ? '2px solid var(--primary)' : 'none';
+  tAluno.style.background   = !isResp ? '#fff' : '';
+
+  if (isResp) carregarResponsaveis();
+  else        carregarAlunosCad();
+}
+
+async function carregarResponsaveis() {
+  document.getElementById('cad-resp-lista').innerHTML =
+    `<div class="empty-state" style="padding:1.5rem"><span class="empty-icon">⏳</span><p>Carregando...</p></div>`;
+
+  const [{ data: users }, { data: solics }] = await Promise.all([
+    cliente.from('usuarios').select('id, nome, email, telefone, created_at').order('nome'),
+    cliente.from('interesse_vagas').select('id, usuario_id, status')
+  ]);
+
+  _todosResponsaveis = (users || []).map(u => ({
+    ...u,
+    total_solics: (solics || []).filter(s => s.usuario_id === u.id).length
+  }));
+
+  filtrarResponsaveis();
+}
+
+function filtrarResponsaveis() {
+  const busca = (document.getElementById('cad-resp-busca')?.value || '').toLowerCase().trim();
+  const lista = busca
+    ? _todosResponsaveis.filter(u => (u.nome + u.email).toLowerCase().includes(busca))
+    : _todosResponsaveis;
+
+  document.getElementById('cad-resp-count').textContent =
+    `${lista.length} responsável${lista.length !== 1 ? 'is' : ''} encontrado${lista.length !== 1 ? 's' : ''}`;
+  renderResponsaveis(lista);
+}
+
+function renderResponsaveis(lista) {
+  const container = document.getElementById('cad-resp-lista');
+  if (!lista.length) {
+    container.innerHTML = `<div class="empty-state" style="padding:1.5rem"><span class="empty-icon">👤</span><p>Nenhum responsável encontrado.</p></div>`;
+    return;
+  }
+  container.innerHTML = lista.map(u => {
+    const data = new Date(u.created_at).toLocaleDateString('pt-BR');
+    return `
+      <div style="display:flex;align-items:center;padding:0.75rem 0;border-bottom:1px solid var(--gray-light);gap:1rem;flex-wrap:wrap">
+        <div style="flex:1;min-width:160px">
+          <div style="font-weight:600;font-size:0.875rem">${escapeHtml(u.nome || '–')}</div>
+          <div style="font-size:0.775rem;color:var(--gray-dark);overflow-wrap:break-word;word-break:break-all">${escapeHtml(u.email || '–')}</div>
+          <div style="font-size:0.75rem;color:#94a3b8">${escapeHtml(u.telefone || 'Sem telefone')} · Cadastrado em ${data}</div>
+        </div>
+        <div style="font-size:0.78rem;color:var(--gray-dark);white-space:nowrap">
+          📋 ${u.total_solics} solicitaç${u.total_solics !== 1 ? 'ões' : 'ão'}
+        </div>
+        <div style="display:flex;gap:0.5rem">
+          <button class="btn btn-secondary btn-sm" onclick="abrirEditarResponsavel('${u.id}')">✏️ Editar</button>
+          <button class="btn btn-sm" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;border-radius:0.5rem;font-size:0.78rem;padding:0.3rem 0.75rem"
+            onclick="excluirResponsavel('${u.id}','${escapeHtml(u.nome)}')">🗑️ Excluir</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function abrirEditarResponsavel(id) {
+  const u = _todosResponsaveis.find(r => r.id === id);
+  if (!u) return;
+  document.getElementById('cad-resp-id').value             = u.id;
+  document.getElementById('cad-resp-email-display').value  = u.email || '';
+  document.getElementById('cad-resp-nome').value           = u.nome || '';
+  document.getElementById('cad-resp-telefone').value       = u.telefone || '';
+  document.getElementById('cad-resp-alert').innerHTML      = '';
+  document.getElementById('cad-resp-modal-overlay').classList.add('active');
+}
+
+function fecharRespModal() {
+  document.getElementById('cad-resp-modal-overlay').classList.remove('active');
+}
+
+async function salvarResponsavel() {
+  const id       = document.getElementById('cad-resp-id').value;
+  const nome     = document.getElementById('cad-resp-nome').value.trim();
+  const telefone = document.getElementById('cad-resp-telefone').value.trim();
+  const alertEl  = document.getElementById('cad-resp-alert');
+  const btn      = document.getElementById('btn-salvar-resp');
+
+  alertEl.innerHTML = '';
+  if (!nome) { alertEl.innerHTML = `<div class="alert alert-error">Informe o nome.</div>`; return; }
+
+  btn.disabled = true; btn.textContent = 'Salvando...';
+  const { error } = await cliente.from('usuarios').update({ nome, telefone }).eq('id', id);
+  btn.disabled = false; btn.textContent = '💾 Salvar';
+
+  if (error) {
+    alertEl.innerHTML = `<div class="alert alert-error">Erro: ${error.message}</div>`;
+    return;
+  }
+  await registrarLog('editar_responsavel', 'usuarios', id, `Responsável ${nome} atualizado`);
+  fecharRespModal();
+  showToast('✅ Responsável atualizado!');
+  carregarResponsaveis();
+}
+
+async function excluirResponsavel(id, nome) {
+  const { isConfirmed } = await Swal.fire({
+    title: 'Excluir responsável?',
+    html: `<p>Isso irá excluir <strong>${escapeHtml(nome)}</strong> e todas as suas solicitações e alunos vinculados.</p>
+           <p style="color:#b91c1c;font-size:0.85rem;margin-top:0.5rem">Esta ação é irreversível.</p>`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Sim, excluir',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#dc2626'
+  });
+  if (!isConfirmed) return;
+
+  const { error } = await cliente.from('usuarios').delete().eq('id', id);
+  if (error) { showToast('❌ Erro ao excluir: ' + error.message); return; }
+
+  await registrarLog('excluir_responsavel', 'usuarios', id, `Responsável ${nome} excluído`);
+  showToast('✅ Responsável excluído.');
+  _todosResponsaveis = _todosResponsaveis.filter(r => r.id !== id);
+  filtrarResponsaveis();
+}
+
+async function carregarAlunosCad() {
+  document.getElementById('cad-aluno-lista').innerHTML =
+    `<div class="empty-state" style="padding:1.5rem"><span class="empty-icon">⏳</span><p>Carregando...</p></div>`;
+
+  const { data, error } = await cliente
+    .from('alunos')
+    .select('id, nome_aluno, segmento, turma, turno, status_aluno, interesse_vagas(id, usuario_id, usuarios(nome, email))')
+    .order('nome_aluno');
+
+  if (error) {
+    document.getElementById('cad-aluno-lista').innerHTML =
+      `<div class="alert alert-error">${error.message}</div>`;
+    return;
+  }
+
+  _todosAlunosCad = data || [];
+  filtrarAlunosCad();
+}
+
+function filtrarAlunosCad() {
+  const busca = (document.getElementById('cad-aluno-busca')?.value || '').toLowerCase().trim();
+  const seg   = document.getElementById('cad-aluno-seg')?.value || '';
+  let lista   = _todosAlunosCad;
+  if (busca) lista = lista.filter(a => a.nome_aluno.toLowerCase().includes(busca));
+  if (seg)   lista = lista.filter(a => a.segmento === seg);
+
+  document.getElementById('cad-aluno-count').textContent =
+    `${lista.length} aluno${lista.length !== 1 ? 's' : ''} encontrado${lista.length !== 1 ? 's' : ''}`;
+  renderAlunosCad(lista);
+}
+
+function renderAlunosCad(lista) {
+  const container = document.getElementById('cad-aluno-lista');
+  if (!lista.length) {
+    container.innerHTML = `<div class="empty-state" style="padding:1.5rem"><span class="empty-icon">🎒</span><p>Nenhum aluno encontrado.</p></div>`;
+    return;
+  }
+
+  const STATUS_COR = {
+    pendente:  'background:#fef9c3;color:#92400e;border-color:#fde68a',
+    aprovado:  'background:#dcfce7;color:#15803d;border-color:#bbf7d0',
+    reprovado: 'background:#fee2e2;color:#dc2626;border-color:#fecaca'
+  };
+  const STATUS_L = { pendente: 'Pendente', aprovado: 'Aprovado', reprovado: 'Reprovado' };
+  const TURNO_L  = { manha: 'Manhã', tarde: 'Tarde', tanto_faz: 'Tanto faz' };
+
+  container.innerHTML = lista.map(a => {
+    const resp    = a.interesse_vagas?.usuarios;
+    const respNome = resp?.nome || '–';
+    const st      = a.status_aluno || 'pendente';
+    const cor     = STATUS_COR[st] || '';
+    return `
+      <div style="display:flex;align-items:center;padding:0.75rem 0;border-bottom:1px solid var(--gray-light);gap:1rem;flex-wrap:wrap">
+        <div style="flex:1;min-width:160px">
+          <div style="font-weight:600;font-size:0.875rem">${escapeHtml(a.nome_aluno)}</div>
+          <div style="font-size:0.775rem;color:var(--gray-dark)">
+            ${SEGMENTO_LABEL[a.segmento] || a.segmento || '–'} · ${escapeHtml(a.turma || '–')} · ${TURNO_L[a.turno] || a.turno || '–'}
+          </div>
+          <div style="font-size:0.75rem;color:#94a3b8">👤 ${escapeHtml(respNome)}</div>
+        </div>
+        <span class="status-badge" style="font-size:0.72rem;${cor}">${STATUS_L[st] || st}</span>
+        <div style="display:flex;gap:0.5rem">
+          <button class="btn btn-secondary btn-sm" onclick="abrirEditarAluno('${a.id}')">✏️ Editar</button>
+          <button class="btn btn-sm" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;border-radius:0.5rem;font-size:0.78rem;padding:0.3rem 0.75rem"
+            onclick="excluirAluno('${a.id}','${escapeHtml(a.nome_aluno)}')">🗑️ Excluir</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function atualizarSeriesCad() {
+  const seg    = document.getElementById('cad-aluno-segmento').value;
+  const select = document.getElementById('cad-aluno-serie');
+  const series = SERIES_POR_SEGMENTO[seg] || [];
+  select.innerHTML = series.map(s => `<option value="${s}">${s}</option>`).join('');
+}
+
+function abrirEditarAluno(id) {
+  const a = _todosAlunosCad.find(x => x.id === id);
+  if (!a) return;
+  document.getElementById('cad-aluno-id').value      = a.id;
+  document.getElementById('cad-aluno-nome').value    = a.nome_aluno || '';
+  document.getElementById('cad-aluno-segmento').value = a.segmento || '';
+  atualizarSeriesCad();
+  document.getElementById('cad-aluno-serie').value   = a.turma || '';
+  document.getElementById('cad-aluno-turno').value   = a.turno || 'manha';
+  document.getElementById('cad-aluno-status').value  = a.status_aluno || 'pendente';
+  document.getElementById('cad-aluno-alert').innerHTML = '';
+  document.getElementById('cad-aluno-modal-overlay').classList.add('active');
+}
+
+function fecharAlunoModal() {
+  document.getElementById('cad-aluno-modal-overlay').classList.remove('active');
+}
+
+async function salvarAluno() {
+  const id       = document.getElementById('cad-aluno-id').value;
+  const nome     = document.getElementById('cad-aluno-nome').value.trim();
+  const segmento = document.getElementById('cad-aluno-segmento').value;
+  const turma    = document.getElementById('cad-aluno-serie').value;
+  const turno    = document.getElementById('cad-aluno-turno').value;
+  const status   = document.getElementById('cad-aluno-status').value;
+  const alertEl  = document.getElementById('cad-aluno-alert');
+  const btn      = document.getElementById('btn-salvar-aluno');
+
+  alertEl.innerHTML = '';
+  if (!nome) { alertEl.innerHTML = `<div class="alert alert-error">Informe o nome do aluno.</div>`; return; }
+
+  btn.disabled = true; btn.textContent = 'Salvando...';
+  const { error } = await cliente.from('alunos')
+    .update({ nome_aluno: nome, segmento, turma, turno, status_aluno: status })
+    .eq('id', id);
+  btn.disabled = false; btn.textContent = '💾 Salvar';
+
+  if (error) {
+    alertEl.innerHTML = `<div class="alert alert-error">Erro: ${error.message}</div>`;
+    return;
+  }
+  await registrarLog('editar_aluno', 'alunos', id, `Aluno ${nome} atualizado`);
+  fecharAlunoModal();
+  showToast('✅ Aluno atualizado!');
+  carregarAlunosCad();
+}
+
+async function excluirAluno(id, nome) {
+  const { isConfirmed } = await Swal.fire({
+    title: 'Excluir aluno?',
+    html: `<p>Isso irá excluir <strong>${escapeHtml(nome)}</strong> permanentemente, incluindo sua alocação de turma caso exista.</p>`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Sim, excluir',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#dc2626'
+  });
+  if (!isConfirmed) return;
+
+  const { error } = await cliente.from('alunos').delete().eq('id', id);
+  if (error) { showToast('❌ Erro ao excluir: ' + error.message); return; }
+
+  await registrarLog('excluir_aluno', 'alunos', id, `Aluno ${nome} excluído`);
+  showToast('✅ Aluno excluído.');
+  _todosAlunosCad = _todosAlunosCad.filter(a => a.id !== id);
+  filtrarAlunosCad();
 }
 
 // ============================================================
