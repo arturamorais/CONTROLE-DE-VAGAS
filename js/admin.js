@@ -431,6 +431,10 @@ async function carregarColaboradores() {
   const isAdmin  = cargoAtual === 'admin' || cargoAtual === 'master';
   const isMaster = cargoAtual === 'master';
 
+  // Botão Adicionar — só master pode cadastrar colaboradores
+  const btnAdicionar = document.getElementById('btn-adicionar-colab');
+  if (btnAdicionar) btnAdicionar.style.display = isMaster ? '' : 'none';
+
   container.innerHTML = lista.map(c => {
     const email    = emailMap[c.id] || '—';
     const cargoLbl = CARGO_LABEL[c.cargo] || c.cargo;
@@ -595,8 +599,8 @@ async function salvarEdicaoColaborador() {
 async function excluirColaborador(id, nome) {
   const { isConfirmed } = await Swal.fire({
     title: 'Excluir colaborador?',
-    html: `<p>Remover <strong>${escapeHtml(nome)}</strong> do painel de gestão?</p>
-           <p style="font-size:0.82rem;color:#94a3b8;margin-top:0.4rem">O cadastro do usuário no sistema não será afetado.</p>`,
+    html: `<p>Excluir <strong>${escapeHtml(nome)}</strong> permanentemente?</p>
+           <p style="font-size:0.82rem;color:#b91c1c;margin-top:0.4rem">O acesso ao painel e o cadastro completo serão removidos. Esta ação é irreversível.</p>`,
     icon: 'warning',
     showCancelButton: true,
     confirmButtonText: 'Sim, excluir',
@@ -605,11 +609,12 @@ async function excluirColaborador(id, nome) {
   });
   if (!isConfirmed) return;
 
-  const { error } = await cliente.from('colaboradores').delete().eq('id', id);
+  // Remove da tabela colaboradores e do auth.users via RPC com security definer
+  const { error } = await cliente.rpc('excluir_usuario_permanente', { user_id: id });
   if (error) { showToast('❌ Erro ao excluir: ' + error.message); return; }
 
-  await registrarLog('excluir_colaborador', 'colaboradores', id, `Colaborador ${nome} removido do painel`);
-  showToast('✅ Colaborador removido.');
+  await registrarLog('excluir_colaborador', 'colaboradores', id, `Colaborador ${nome} excluído permanentemente`);
+  showToast('✅ Colaborador excluído permanentemente.');
   carregarColaboradores();
 }
 
@@ -2540,12 +2545,13 @@ async function excluirResponsavel(id, nome, nSolics, nAlunos) {
   });
   if (!isConfirmed) return;
 
-  const { error } = await cliente.from('usuarios').delete().eq('id', id);
+  // Remove public.usuarios (cascade remove solicitações/alunos) e auth.users via RPC
+  const { error } = await cliente.rpc('excluir_usuario_permanente', { user_id: id });
   if (error) { showToast('❌ Erro ao excluir: ' + error.message); return; }
 
   await registrarLog('excluir_responsavel', 'usuarios', id,
-    `Responsável ${nome} excluído (${nSolics} solicitações, ${nAlunos} alunos)`);
-  showToast('✅ Responsável e dados vinculados excluídos.');
+    `Responsável ${nome} excluído permanentemente (${nSolics} solicitações, ${nAlunos} alunos)`);
+  showToast('✅ Responsável e todos os dados vinculados excluídos permanentemente.');
   _todosResponsaveis = _todosResponsaveis.filter(r => r.id !== id);
   filtrarResponsaveis();
 }
@@ -2691,9 +2697,9 @@ async function excluirAluno(id, nome, respNome) {
 
   const { isConfirmed } = await Swal.fire({
     title: 'Excluir aluno?',
-    html: `<p>Excluir <strong>${escapeHtml(nome)}</strong> permanentemente?</p>
+    html: `<p>Excluir <strong>${escapeHtml(nome)}</strong> permanentemente do banco de dados?</p>
            ${vinculo}
-           <p style="font-size:0.82rem;color:#94a3b8;margin-top:0.4rem">A alocação de turma, se existir, também será removida.</p>`,
+           <p style="font-size:0.82rem;color:#b91c1c;margin-top:0.4rem">A alocação de turma, se existir, também será removida. Esta ação é irreversível.</p>`,
     icon: 'warning',
     showCancelButton: true,
     confirmButtonText: 'Sim, excluir',
