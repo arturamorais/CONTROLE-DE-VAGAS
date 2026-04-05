@@ -858,7 +858,8 @@ function renderSolicitacoes(lista) {
     const totalAlunos  = alunos.length;
     const aprov        = alunos.filter(a => (a.status_aluno || 'pendente') === 'aprovado').length;
     const reprov       = alunos.filter(a => (a.status_aluno || 'pendente') === 'reprovado').length;
-    const temRessalva  = (s.status === 'aprovado' || s.status === 'matriculado') && totalAlunos > 0 && aprov < totalAlunos;
+    const matrAlunos   = alunos.filter(a => (a.status_aluno || 'pendente') === 'matriculado').length;
+    const temRessalva  = s.status === 'aprovado' && totalAlunos > 0 && (aprov + matrAlunos) < totalAlunos;
     const badgeLabel   = temRessalva ? 'Aprovado com ressalvas' : STATUS_LABEL[s.status];
 
     const alunosTags = alunos.map(a => {
@@ -942,7 +943,8 @@ function abrirDetalhe(id) {
   const totalAlunos = alunos.length;
   const aprov       = alunos.filter(a => (a.status_aluno || 'pendente') === 'aprovado').length;
   const reprov      = alunos.filter(a => (a.status_aluno || 'pendente') === 'reprovado').length;
-  const temRessalva = (s.status === 'aprovado' || s.status === 'matriculado') && totalAlunos > 0 && aprov < totalAlunos;
+  const matrAlunos  = alunos.filter(a => (a.status_aluno || 'pendente') === 'matriculado').length;
+  const temRessalva = s.status === 'aprovado' && totalAlunos > 0 && (aprov + matrAlunos) < totalAlunos;
   const badgeLabel  = temRessalva ? 'Aprovado com ressalvas' : STATUS_LABEL[s.status];
 
   document.getElementById('modal-content').innerHTML = `
