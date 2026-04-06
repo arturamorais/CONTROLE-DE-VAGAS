@@ -1320,7 +1320,10 @@ async function confirmarMatriculaAluno(alunoId, interesseId) {
 
   // Se todos os alunos agora estão matriculados, muda a solicitação para matriculado
   if (outrosNaoMatr.length === 0) {
-    await cliente.from('interesse_vagas').update({ status: 'matriculado' }).eq('id', interesseId);
+    const { error: errSolic } = await cliente.from('interesse_vagas')
+      .update({ status: 'matriculado' })
+      .eq('id', interesseId);
+    if (errSolic) { showToast('❌ Erro ao confirmar solicitação: ' + errSolic.message); return; }
     if (sol) sol.status = 'matriculado';
     await registrarHistorico(interesseId, nota, nomeColaborador);
     await registrarLog('matricular_aluno', 'alunos', alunoId, `${aluno.nome_aluno} matriculado — solicitação concluída`);
