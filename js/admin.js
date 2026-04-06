@@ -562,6 +562,44 @@ function fecharEditarColabModal() {
   document.getElementById('colab-edit-modal-overlay').classList.remove('active');
 }
 
+async function enviarConviteColab() {
+  const email    = document.getElementById('colab-edit-email').value.trim();
+  const feedback = document.getElementById('colab-edit-link-feedback');
+  if (!email) { showToast('⚠️ Salve o e-mail antes de enviar.'); return; }
+
+  const { error } = await cliente.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + '/reset-senha.html'
+  });
+
+  if (error) { showToast('❌ Erro ao enviar: ' + error.message); return; }
+
+  feedback.textContent = '✅ E-mail de acesso enviado para ' + email;
+  feedback.style.display = '';
+  await registrarLog('reenviar_convite_colaborador', 'colaboradores',
+    document.getElementById('colab-edit-id').value,
+    `Link de acesso reenviado para ${email}`);
+}
+
+async function copiarLinkConviteColab() {
+  const email    = document.getElementById('colab-edit-email').value.trim();
+  const feedback = document.getElementById('colab-edit-link-feedback');
+  if (!email) { showToast('⚠️ Salve o e-mail antes de copiar o link.'); return; }
+
+  const { error } = await cliente.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + '/reset-senha.html'
+  });
+
+  const base = window.location.origin + '/reset-senha.html';
+  await navigator.clipboard.writeText(base);
+
+  if (error) {
+    feedback.textContent = '🔗 URL copiada: ' + base + ' (erro ao enviar e-mail: ' + error.message + ')';
+  } else {
+    feedback.textContent = '🔗 URL copiada: ' + base + ' (link também enviado ao e-mail)';
+  }
+  feedback.style.display = '';
+}
+
 async function salvarEdicaoColaborador() {
   const id            = document.getElementById('colab-edit-id').value;
   const emailOriginal = document.getElementById('colab-edit-email-original').value.trim().toLowerCase();
