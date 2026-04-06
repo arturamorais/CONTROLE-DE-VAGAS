@@ -35,7 +35,7 @@ async function registrarLog(acao, entidade, entidadeId, descricao) {
   try {
     const { data: { user } } = await cliente.auth.getUser();
     if (!user) return;
-    const { data: perfil } = await cliente.from('usuarios').select('nome').eq('id', user.id).single();
+    const { data: perfil } = await cliente.from('usuarios').select('nome').eq('id', user.id).maybeSingle();
     await cliente.from('logs').insert({
       usuario_id:   user.id,
       nome_usuario: perfil?.nome || user.email || 'Responsável',
@@ -109,7 +109,7 @@ function closeSidebar() {
 //  PERFIL
 // ============================================================
 async function carregarPerfil(user) {
-  const { data } = await cliente.from('usuarios').select('*').eq('id', user.id).single();
+  const { data } = await cliente.from('usuarios').select('*').eq('id', user.id).maybeSingle();
   const nome  = data?.nome     || '';
   const tel   = data?.telefone || '';
   const email = user.email     || '';
@@ -244,17 +244,21 @@ async function carregarOverview(userId) {
 
   // ---- mini cards de solicitações ----
   const STATUS_CONFIG = {
-    pendente:   { icon: '⏳', cor: '#92400e', bg: '#fef3c7', label: 'Pendente' },
-    em_analise: { icon: '🔍', cor: '#1e40af', bg: '#eff6ff', label: 'Em Análise' },
-    aprovado:   { icon: '✅', cor: '#15803d', bg: '#f0fdf4', label: 'Aprovada' },
-    reprovado:  { icon: '✕',  cor: '#b91c1c', bg: '#fef2f2', label: 'Reprovado' }
+    pendente:    { icon: '⏳', cor: '#92400e', bg: '#fef3c7', label: 'Pendente' },
+    em_analise:  { icon: '🔍', cor: '#1e40af', bg: '#eff6ff', label: 'Em Análise' },
+    aprovado:    { icon: '✅', cor: '#15803d', bg: '#f0fdf4', label: 'Aprovada' },
+    reprovado:   { icon: '✕',  cor: '#b91c1c', bg: '#fef2f2', label: 'Reprovada' },
+    cancelado:   { icon: '🚫', cor: '#7c3aed', bg: '#f5f3ff', label: 'Cancelada' },
+    matriculado: { icon: '🎓', cor: '#0e7490', bg: '#ecfeff', label: 'Confirmada' }
   };
 
   const PROXIMOS = {
-    pendente:   'Aguardando análise da equipe Plenus.',
-    em_analise: 'Em análise — a equipe entrará em contato em breve.',
-    aprovado:   'Entre em contato com a escola para efetivar a matrícula.',
-    reprovado:  'Confira o histórico para entender o motivo.'
+    pendente:    'Aguardando análise da equipe Plenus.',
+    em_analise:  'Em análise — a equipe entrará em contato em breve.',
+    aprovado:    'Entre em contato com a escola para efetivar a matrícula.',
+    reprovado:   'Confira o histórico para entender o motivo.',
+    cancelado:   'Solicitação cancelada.',
+    matriculado: 'Matrícula confirmada! Aguarde o contato da escola.'
   };
 
   document.getElementById('overview-solicitacoes').innerHTML = data.map(s => {
@@ -462,7 +466,7 @@ function atualizarTurmas(id) {
 // ============================================================
 async function editarSolicitacao(id) {
   const { data, error } = await cliente
-    .from('interesse_vagas').select('*, alunos(*)').eq('id', id).single();
+    .from('interesse_vagas').select('*, alunos(*)').eq('id', id).maybeSingle();
   if (error || !data) return showToast('Erro ao carregar solicitação.');
 
   modoEdicao            = true;
