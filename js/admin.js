@@ -423,6 +423,9 @@ async function carregarColaboradores() {
     : { data: [] };
   const emailMap = Object.fromEntries((usuarios || []).map(u => [u.id, u.email]));
 
+  // Cache para uso no modal de edição
+  _todosColaboradores = (lista || []).map(c => ({ ...c, email: emailMap[c.id] || '' }));
+
   if (!lista?.length) {
     container.innerHTML = `<div class="empty-state" style="padding:1.5rem"><span class="empty-icon">👥</span><p>Nenhum colaborador cadastrado.</p></div>`;
     return;
@@ -458,7 +461,7 @@ async function carregarColaboradores() {
           onclick="toggleColaboradorAtivo('${c.id}', ${c.ativo})">
           ${c.ativo ? '🔴 Desativar' : '🟢 Ativar'}
         </button>
-        <button class="btn btn-secondary btn-sm" onclick="abrirEditarColaborador('${c.id}','${escapeHtml(c.nome)}')">✏️ Editar</button>
+        <button class="btn btn-secondary btn-sm" onclick="abrirEditarColaborador('${c.id}')">✏️ Editar</button>
         <button class="btn btn-sm" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;border-radius:0.5rem;font-size:0.78rem;padding:0.3rem 0.75rem"
           onclick="excluirColaborador('${c.id}','${escapeHtml(c.nome)}')">🗑️ Excluir</button>
       </div>` : '';
@@ -564,10 +567,14 @@ async function salvarNovoColaborador() {
   carregarColaboradores();
 }
 
-function abrirEditarColaborador(id, nome) {
-  document.getElementById('colab-edit-id').value      = id;
-  document.getElementById('colab-edit-nome').value    = nome;
-  document.getElementById('colab-edit-alert').innerHTML = '';
+function abrirEditarColaborador(id) {
+  const c = _todosColaboradores.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('colab-edit-id').value             = c.id;
+  document.getElementById('colab-edit-email-original').value = c.email || '';
+  document.getElementById('colab-edit-nome').value           = c.nome || '';
+  document.getElementById('colab-edit-email').value          = c.email || '';
+  document.getElementById('colab-edit-alert').innerHTML      = '';
   document.getElementById('colab-edit-modal-overlay').classList.add('active');
 }
 
@@ -576,21 +583,59 @@ function fecharEditarColabModal() {
 }
 
 async function salvarEdicaoColaborador() {
-  const id      = document.getElementById('colab-edit-id').value;
-  const nome    = document.getElementById('colab-edit-nome').value.trim();
-  const alertEl = document.getElementById('colab-edit-alert');
-  const btn     = document.getElementById('btn-salvar-colab-edit');
+  const id            = document.getElementById('colab-edit-id').value;
+  const emailOriginal = document.getElementById('colab-edit-email-original').value.trim().toLowerCase();
+  const nome          = document.getElementById('colab-edit-nome').value.trim();
+  const email         = document.getElementById('colab-edit-email').value.trim().toLowerCase();
+  const alertEl       = document.getElementById('colab-edit-alert');
+  const btn           = document.getElementById('btn-salvar-colab-edit');
 
   alertEl.innerHTML = '';
-  if (!nome) { alertEl.innerHTML = `<div class="alert alert-error">Informe o nome.</div>`; return; }
+  if (!nome)  { alertEl.innerHTML = `<div class="alert alert-error">Informe o nome.</div>`; return; }
+  if (!email) { alertEl.innerHTML = `<div class="alert alert-error">Informe o e-mail.</div>`; return; }
+
+  const emailMudou = email !== emailOriginal;
+
+  if (emailMudou) {
+    const { isConfirmed } = await Swal.fire({
+      icon: 'warning',
+      title: 'Alterar e-mail?',
+      html: `<p style="font-size:0.875rem;color:#475569;line-height:1.6">
+        O e-mail de login será alterado de<br>
+        <strong>${emailOriginal}</strong><br>para<br>
+        <strong>${email}</strong><br><br>
+        O colaborador precisará usar o novo e-mail para acessar o sistema.
+      </p>`,
+      showCancelButton: true,
+      confirmButtonText: 'Sim, alterar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#f97316'
+    });
+    if (!isConfirmed) return;
+  }
 
   btn.disabled = true; btn.textContent = 'Salvando...';
+
+  if (emailMudou) {
+    const { error: errEmail } = await cliente.rpc('alterar_email_usuario', {
+      p_user_id: id,
+      p_novo_email: email
+    });
+    if (errEmail) {
+      btn.disabled = false; btn.textContent = '💾 Salvar';
+      alertEl.innerHTML = `<div class="alert alert-error">Erro ao alterar e-mail: ${errEmail.message}</div>`;
+      return;
+    }
+    document.getElementById('colab-edit-email-original').value = email;
+  }
+
   const { error } = await cliente.from('colaboradores').update({ nome }).eq('id', id);
   btn.disabled = false; btn.textContent = '💾 Salvar';
 
   if (error) { alertEl.innerHTML = `<div class="alert alert-error">Erro: ${error.message}</div>`; return; }
 
-  await registrarLog('editar_colaborador', 'colaboradores', id, `Nome atualizado para ${nome}`);
+  await registrarLog('editar_colaborador', 'colaboradores', id,
+    emailMudou ? `Colaborador atualizado — e-mail alterado para ${email}` : `Nome atualizado para ${nome}`);
   fecharEditarColabModal();
   showToast('✅ Colaborador atualizado!');
   carregarColaboradores();
@@ -2469,8 +2514,9 @@ async function carregarRelatorios() {
 // ============================================================
 //  CADASTROS — RESPONSÁVEIS E ALUNOS
 // ============================================================
-let _todosResponsaveis = [];
-let _todosAlunosCad    = [];
+let _todosColaboradores = [];
+let _todosResponsaveis  = [];
+let _todosAlunosCad     = [];
 
 function carregarCadastros() {
   const tab = document.getElementById('tab-responsaveis');
