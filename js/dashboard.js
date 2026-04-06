@@ -18,8 +18,8 @@ const SEGMENTO_LABEL = {
 const STATUS_LABEL = {
   pendente:   'Pendente',
   em_analise: 'Em análise',
-  aprovado:   'Aprovado',
-  reprovado:  'Reprovado'
+  aprovado:   'Aprovada',
+  reprovado:  'Reprovada'
 };
 
 let alunoCounter          = 0;
@@ -244,7 +244,7 @@ async function carregarOverview(userId) {
   const STATUS_CONFIG = {
     pendente:   { icon: '⏳', cor: '#92400e', bg: '#fef3c7', label: 'Pendente' },
     em_analise: { icon: '🔍', cor: '#1e40af', bg: '#eff6ff', label: 'Em Análise' },
-    aprovado:   { icon: '✅', cor: '#15803d', bg: '#f0fdf4', label: 'Aprovado' },
+    aprovado:   { icon: '✅', cor: '#15803d', bg: '#f0fdf4', label: 'Aprovada' },
     reprovado:  { icon: '✕',  cor: '#b91c1c', bg: '#fef2f2', label: 'Reprovado' }
   };
 
@@ -661,7 +661,7 @@ async function carregarSolicitacoes() {
     const temRessalva   = s.status === 'aprovado' && totalAlunos > 0 && aprovados < totalAlunos;
     const ressalvaHtml  = temRessalva ? `
       <div style="margin-top:0.625rem;background:#fef3c7;border:1px solid #fde68a;border-left:3px solid #f59e0b;border-radius:0 0.5rem 0.5rem 0;padding:0.5rem 0.75rem;font-size:0.78rem;color:#92400e;line-height:1.5">
-        ⚠️ <strong>Aprovado com ressalvas:</strong> ${aprovados} de ${totalAlunos} aluno${totalAlunos !== 1 ? 's' : ''} aprovado${aprovados !== 1 ? 's' : ''}${reprovados > 0 ? ` · ${reprovados} reprovado${reprovados !== 1 ? 's' : ''}` : ''}.
+        ⚠️ <strong>Aprovada com ressalvas:</strong> ${aprovados} de ${totalAlunos} aluno${totalAlunos !== 1 ? 's' : ''} aprovado${aprovados !== 1 ? 's' : ''}${reprovados > 0 ? ` · ${reprovados} reprovado${reprovados !== 1 ? 's' : ''}` : ''}.
         Verifique os detalhes de cada aluno abaixo.
       </div>` : '';
 
@@ -687,7 +687,7 @@ async function carregarSolicitacoes() {
         </div>
       </details>` : '';
 
-    const badgeLabel = temRessalva ? 'Aprovado com ressalvas' : statusLabel;
+    const badgeLabel = temRessalva ? 'Aprovada com ressalvas' : statusLabel;
 
     return `
       <div class="solicitacao-card">

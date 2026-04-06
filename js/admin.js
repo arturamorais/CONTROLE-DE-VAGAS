@@ -30,10 +30,10 @@ const PERMUTA_LABEL = {
 const STATUS_LABEL = {
   pendente:    'Pendente',
   em_analise:  'Em Análise',
-  aprovado:    'Aprovado',
-  reprovado:   'Reprovado',
-  cancelado:   'Cancelado',
-  matriculado: 'Matriculado'
+  aprovado:    'Aprovada',
+  reprovado:   'Reprovada',
+  cancelado:   'Cancelada',
+  matriculado: 'Matriculada'
 };
 
 const CARGO_LABEL = {
@@ -87,7 +87,7 @@ const GUIAS = {
 };
 
 const FRASES_STATUS = {
-  aprovado:    'Aprovado. O aluno(a) será dirigido(a) para efetivação de matrícula.',
+  aprovado:    'Aprovada. O aluno(a) será dirigido(a) para efetivação de matrícula.',
   reprovado:   'Reprovado. Infelizmente a solicitação não pôde ser atendida no momento. Agradecemos o interesse no Colégio Plenus e ficamos à disposição para futuras oportunidades.',
   em_analise:  'Solicitação em análise pela equipe pedagógica. Em breve entraremos em contato para dar continuidade ao processo de seleção.',
   pendente:    'Solicitação recebida e registrada. Aguardando início da análise pela equipe do Colégio Plenus.',
@@ -982,7 +982,7 @@ function renderSolicitacoes(lista) {
     const reprov       = alunos.filter(a => (a.status_aluno || 'pendente') === 'reprovado').length;
     const matrAlunos   = alunos.filter(a => (a.status_aluno || 'pendente') === 'matriculado').length;
     const temRessalva  = s.status === 'aprovado' && totalAlunos > 0 && (aprov + matrAlunos) < totalAlunos;
-    const badgeLabel   = temRessalva ? 'Aprovado com ressalvas' : STATUS_LABEL[s.status];
+    const badgeLabel   = temRessalva ? 'Aprovada com ressalvas' : STATUS_LABEL[s.status];
 
     const alunosTags = alunos.map(a => {
       const st = a.status_aluno || 'pendente';
@@ -998,7 +998,7 @@ function renderSolicitacoes(lista) {
 
     const ressalvaHtml = temRessalva ? `
       <div style="background:#fef3c7;border:1px solid #fde68a;border-left:3px solid #f59e0b;border-radius:0 0.5rem 0.5rem 0;padding:0.5rem 0.75rem;font-size:0.78rem;color:#92400e;line-height:1.5">
-        ⚠️ <strong>Aprovado com ressalvas:</strong> ${aprov} de ${totalAlunos} aluno${totalAlunos !== 1 ? 's' : ''} aprovado${aprov !== 1 ? 's' : ''}${reprov > 0 ? ` · ${reprov} reprovado${reprov !== 1 ? 's' : ''}` : ''}.
+        ⚠️ <strong>Aprovada com ressalvas:</strong> ${aprov} de ${totalAlunos} aluno${totalAlunos !== 1 ? 's' : ''} aprovado${aprov !== 1 ? 's' : ''}${reprov > 0 ? ` · ${reprov} reprovado${reprov !== 1 ? 's' : ''}` : ''}.
       </div>` : '';
 
     return `
@@ -1067,7 +1067,7 @@ function abrirDetalhe(id) {
   const reprov      = alunos.filter(a => (a.status_aluno || 'pendente') === 'reprovado').length;
   const matrAlunos  = alunos.filter(a => (a.status_aluno || 'pendente') === 'matriculado').length;
   const temRessalva = s.status === 'aprovado' && totalAlunos > 0 && (aprov + matrAlunos) < totalAlunos;
-  const badgeLabel  = temRessalva ? 'Aprovado com ressalvas' : STATUS_LABEL[s.status];
+  const badgeLabel  = temRessalva ? 'Aprovada com ressalvas' : STATUS_LABEL[s.status];
 
   document.getElementById('modal-content').innerHTML = `
     <!-- Cabeçalho -->
@@ -1089,7 +1089,7 @@ function abrirDetalhe(id) {
 
     ${temRessalva ? `
     <div style="background:#fef3c7;border-bottom:1px solid #fde68a;padding:0.5rem 1.25rem;font-size:0.8rem;color:#92400e;line-height:1.5">
-      ⚠️ <strong>Aprovado com ressalvas:</strong> ${aprov} de ${totalAlunos} aluno${totalAlunos !== 1 ? 's' : ''} aprovado${aprov !== 1 ? 's' : ''}${reprov > 0 ? ` · ${reprov} reprovado${reprov !== 1 ? 's' : ''}` : ''}.
+      ⚠️ <strong>Aprovada com ressalvas:</strong> ${aprov} de ${totalAlunos} aluno${totalAlunos !== 1 ? 's' : ''} aprovado${aprov !== 1 ? 's' : ''}${reprov > 0 ? ` · ${reprov} reprovado${reprov !== 1 ? 's' : ''}` : ''}.
     </div>` : ''}
 
     <!-- Abas -->
@@ -1616,7 +1616,7 @@ function fecharGuiaModalClick(event) {
 //  MODAL UNIFICADO: CONFIRMAÇÃO DE STATUS + NOTA
 // ============================================================
 const ACAO_CONFIG = {
-  aprovado:    { titulo: '✅ Aprovar solicitação',        cor: '#15803d', bg: '#dcfce7', border: '#bbf7d0', texto: 'Ao confirmar, o status será alterado para Aprovado e a nota abaixo será registrada no histórico.' },
+  aprovado:    { titulo: '✅ Aprovar solicitação',        cor: '#15803d', bg: '#dcfce7', border: '#bbf7d0', texto: 'Ao confirmar, o status será alterado para Aprovada e a nota abaixo será registrada no histórico.' },
   reprovado:   { titulo: '✕ Reprovar solicitação',       cor: '#dc2626', bg: '#fee2e2', border: '#fecaca', texto: 'Ao confirmar, o status será alterado para Reprovado e a nota abaixo será registrada no histórico.' },
   em_analise:  { titulo: '🔍 Colocar em Análise',        cor: '#1e40af', bg: '#eff6ff', border: '#bfdbfe', texto: 'Ao confirmar, o status será alterado para Em Análise e a nota abaixo será registrada no histórico.' },
   pendente:    { titulo: '↩ Voltar para Pendente',       cor: '#b45309', bg: '#fef3c7', border: '#fde68a', texto: 'Ao confirmar, o status será alterado para Pendente e a nota abaixo será registrada no histórico.' },
