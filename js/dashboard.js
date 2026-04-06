@@ -16,10 +16,12 @@ const SEGMENTO_LABEL = {
 };
 
 const STATUS_LABEL = {
-  pendente:   'Pendente',
-  em_analise: 'Em análise',
-  aprovado:   'Aprovada',
-  reprovado:  'Reprovada'
+  pendente:    'Pendente',
+  em_analise:  'Em análise',
+  aprovado:    'Aprovada',
+  reprovado:   'Reprovada',
+  cancelado:   'Cancelada',
+  matriculado: 'Confirmada'
 };
 
 let alunoCounter          = 0;

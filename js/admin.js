@@ -33,7 +33,7 @@ const STATUS_LABEL = {
   aprovado:    'Aprovada',
   reprovado:   'Reprovada',
   cancelado:   'Cancelada',
-  matriculado: 'Matriculada'
+  matriculado: 'Confirmada'
 };
 
 const CARGO_LABEL = {
@@ -1324,7 +1324,7 @@ async function confirmarMatriculaAluno(alunoId, interesseId) {
     if (sol) sol.status = 'matriculado';
     await registrarHistorico(interesseId, nota, nomeColaborador);
     await registrarLog('matricular_aluno', 'alunos', alunoId, `${aluno.nome_aluno} matriculado — solicitação concluída`);
-    showToast('🎓 Matrícula confirmada! Todos os alunos matriculados.');
+    showToast('🎓 Solicitação confirmada! Todos os alunos matriculados.');
   } else {
     await registrarHistorico(interesseId, `Aluno ${aluno.nome_aluno} matriculado.${txtTurma}`, nomeColaborador);
     await registrarLog('matricular_aluno', 'alunos', alunoId, `${aluno.nome_aluno} matriculado individualmente`);
@@ -1620,8 +1620,8 @@ const ACAO_CONFIG = {
   reprovado:   { titulo: '✕ Reprovar solicitação',       cor: '#dc2626', bg: '#fee2e2', border: '#fecaca', texto: 'Ao confirmar, o status será alterado para Reprovado e a nota abaixo será registrada no histórico.' },
   em_analise:  { titulo: '🔍 Colocar em Análise',        cor: '#1e40af', bg: '#eff6ff', border: '#bfdbfe', texto: 'Ao confirmar, o status será alterado para Em Análise e a nota abaixo será registrada no histórico.' },
   pendente:    { titulo: '↩ Voltar para Pendente',       cor: '#b45309', bg: '#fef3c7', border: '#fde68a', texto: 'Ao confirmar, o status será alterado para Pendente e a nota abaixo será registrada no histórico.' },
-  cancelado:   { titulo: '🚫 Cancelar solicitação',      cor: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', texto: 'Atenção: esta ação cancela uma solicitação já aprovada ou matriculada. O motivo é obrigatório e será registrado no histórico.', obrigatorio: true },
-  matriculado: { titulo: '🎓 Confirmar Matrícula',       cor: '#0e7490', bg: '#ecfeff', border: '#a5f3fc', texto: 'Ao confirmar, a matrícula será registrada. O responsável será informado sobre a turma e a possibilidade de ajuste pedagógico.' }
+  cancelado:   { titulo: '🚫 Cancelar solicitação',      cor: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', texto: 'Atenção: esta ação cancela uma solicitação já aprovada ou confirmada. O motivo é obrigatório e será registrado no histórico.', obrigatorio: true },
+  matriculado: { titulo: '🎓 Confirmar Solicitação',     cor: '#0e7490', bg: '#ecfeff', border: '#a5f3fc', texto: 'Ao confirmar, a solicitação será marcada como Confirmada. O responsável será informado sobre a turma e a possibilidade de ajuste pedagógico.' }
 };
 
 function confirmarStatus(id, novoStatus) {
@@ -2462,7 +2462,7 @@ async function carregarRelatorios() {
     cancelado:   '#7c3aed',
     matriculado: '#0e7490'
   };
-  const LABEL_STATUS = { pendente: 'Pendente', em_analise: 'Em Análise', aprovado: 'Aprovado', reprovado: 'Reprovado', cancelado: 'Cancelado', matriculado: 'Matriculado' };
+  const LABEL_STATUS = { pendente: 'Pendente', em_analise: 'Em Análise', aprovado: 'Aprovada', reprovado: 'Reprovada', cancelado: 'Cancelada', matriculado: 'Confirmada' };
 
   const PAL_BLUE   = ['#1e3a8a','#1e40af','#1d4ed8','#2563eb','#3b82f6','#60a5fa','#93c5fd','#bfdbfe','#dbeafe'];
   const PAL_GREEN  = ['#14532d','#166534','#15803d','#16a34a','#22c55e','#4ade80','#86efac','#bbf7d0'];
