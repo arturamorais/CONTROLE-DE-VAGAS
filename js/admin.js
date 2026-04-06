@@ -1100,7 +1100,7 @@ function abrirDetalhe(id) {
       <button class="detalhe-tab" onclick="trocarAbaDetalhe('historico',this)" id="tab-historico">🕐 Histórico</button>
     </div>
 
-    <div class="modal-body" style="padding:0;overflow-y:auto;max-height:calc(90vh - 160px)">
+    <div class="modal-body">
 
       <!-- ABA: Resumo -->
       <div id="aba-resumo" class="detalhe-aba" style="padding:1.25rem;display:flex;flex-direction:column;gap:1rem">
