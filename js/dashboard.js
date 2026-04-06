@@ -59,7 +59,7 @@ async function init() {
   await carregarOverview(data.user.id);
   // Exibe botão de gestão se o usuário também for colaborador ativo
   const { data: colab } = await cliente
-    .from('colaboradores').select('id').eq('id', data.user.id).eq('ativo', true).single();
+    .from('colaboradores').select('id').eq('id', data.user.id).eq('ativo', true).maybeSingle();
   if (colab) document.getElementById('btn-admin-wrap').style.display = 'block';
 }
 
