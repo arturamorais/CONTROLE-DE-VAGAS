@@ -2599,11 +2599,12 @@ function renderResponsaveis(lista) {
 function abrirEditarResponsavel(id) {
   const u = _todosResponsaveis.find(r => r.id === id);
   if (!u) return;
-  document.getElementById('cad-resp-id').value        = u.id;
-  document.getElementById('cad-resp-nome').value      = u.nome || '';
-  document.getElementById('cad-resp-email').value     = u.email || '';
-  document.getElementById('cad-resp-telefone').value  = u.telefone || '';
-  document.getElementById('cad-resp-alert').innerHTML = '';
+  document.getElementById('cad-resp-id').value             = u.id;
+  document.getElementById('cad-resp-email-original').value = u.email || '';
+  document.getElementById('cad-resp-nome').value           = u.nome || '';
+  document.getElementById('cad-resp-email').value          = u.email || '';
+  document.getElementById('cad-resp-telefone').value       = u.telefone || '';
+  document.getElementById('cad-resp-alert').innerHTML      = '';
   document.getElementById('cad-resp-link-feedback').style.display = 'none';
   document.getElementById('cad-resp-modal-overlay').classList.add('active');
 }
@@ -2613,12 +2614,13 @@ function fecharRespModal() {
 }
 
 async function salvarResponsavel() {
-  const id       = document.getElementById('cad-resp-id').value;
-  const nome     = document.getElementById('cad-resp-nome').value.trim();
-  const email    = document.getElementById('cad-resp-email').value.trim().toLowerCase();
-  const telefone = document.getElementById('cad-resp-telefone').value.trim();
-  const alertEl  = document.getElementById('cad-resp-alert');
-  const btn      = document.getElementById('btn-salvar-resp');
+  const id            = document.getElementById('cad-resp-id').value;
+  const emailOriginal = document.getElementById('cad-resp-email-original').value.trim().toLowerCase();
+  const nome          = document.getElementById('cad-resp-nome').value.trim();
+  const email         = document.getElementById('cad-resp-email').value.trim().toLowerCase();
+  const telefone      = document.getElementById('cad-resp-telefone').value.trim();
+  const alertEl       = document.getElementById('cad-resp-alert');
+  const btn           = document.getElementById('btn-salvar-resp');
 
   alertEl.innerHTML = '';
   if (!nome)  { alertEl.innerHTML = `<div class="alert alert-error">Informe o nome.</div>`; return; }
@@ -2627,7 +2629,42 @@ async function salvarResponsavel() {
     alertEl.innerHTML = `<div class="alert alert-error">Telefone inválido. Use o formato (00) 00000-0000.</div>`; return;
   }
 
+  const emailMudou = email !== emailOriginal;
+
+  if (emailMudou) {
+    const { isConfirmed } = await Swal.fire({
+      icon: 'warning',
+      title: 'Alterar e-mail?',
+      html: `<p style="font-size:0.875rem;color:#475569;line-height:1.6">
+        O e-mail de login será alterado de<br>
+        <strong>${emailOriginal}</strong><br>para<br>
+        <strong>${email}</strong><br><br>
+        O responsável precisará usar o novo e-mail para acessar o sistema.
+      </p>`,
+      showCancelButton: true,
+      confirmButtonText: 'Sim, alterar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#f97316'
+    });
+    if (!isConfirmed) return;
+  }
+
   btn.disabled = true; btn.textContent = 'Salvando...';
+
+  if (emailMudou) {
+    const { error: errEmail } = await cliente.rpc('alterar_email_usuario', {
+      p_user_id: id,
+      p_novo_email: email
+    });
+    if (errEmail) {
+      btn.disabled = false; btn.textContent = '💾 Salvar';
+      alertEl.innerHTML = `<div class="alert alert-error">Erro ao alterar e-mail: ${errEmail.message}</div>`;
+      return;
+    }
+    // Atualiza o campo original para refletir o novo valor salvo
+    document.getElementById('cad-resp-email-original').value = email;
+  }
+
   const { error } = await cliente.from('usuarios').update({ nome, email, telefone }).eq('id', id);
   btn.disabled = false; btn.textContent = '💾 Salvar';
 
@@ -2635,7 +2672,8 @@ async function salvarResponsavel() {
     alertEl.innerHTML = `<div class="alert alert-error">Erro: ${error.message}</div>`;
     return;
   }
-  await registrarLog('editar_responsavel', 'usuarios', id, `Responsável ${nome} atualizado`);
+  await registrarLog('editar_responsavel', 'usuarios', id,
+    emailMudou ? `Responsável ${nome} atualizado — e-mail alterado` : `Responsável ${nome} atualizado`);
   fecharRespModal();
   showToast('✅ Responsável atualizado!');
   carregarResponsaveis();
