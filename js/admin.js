@@ -147,6 +147,10 @@ async function init() {
   document.getElementById('profile-cargo-display').textContent = cargo;
   document.getElementById('perfil-nome').value           = colab.nome;
 
+  // Carregar telefone do perfil
+  const { data: uData } = await cliente.from('usuarios').select('telefone').eq('id', user.id).single();
+  if (uData?.telefone) document.getElementById('perfil-telefone').value = uData.telefone;
+
   // Revelar itens do nav conforme permissões do cargo
   const permitido = PERMISSOES[colab.cargo] || PERMISSOES['colaborador'];
   ['cadastros','relatorios','logs','dados','colaboradores'].forEach(sec => {
@@ -3264,6 +3268,59 @@ async function salvarPerfil() {
   document.getElementById('profile-nome-display').textContent = nome;
   await registrarLog('editar_perfil', 'colaboradores', user.id, 'Perfil do colaborador atualizado');
   showToast('✅ Perfil atualizado!');
+}
+
+async function alterarEmailPerfil() {
+  const btn      = document.getElementById('btn-alterar-email');
+  const alertDiv = document.getElementById('email-alert');
+  const novoEmail = document.getElementById('perfil-novo-email').value.trim().toLowerCase();
+  alertDiv.innerHTML = '';
+  if (!novoEmail) { alertDiv.innerHTML = `<div class="alert alert-error">Informe o novo e-mail.</div>`; return; }
+
+  btn.disabled = true; btn.innerHTML = '<span class="loading"></span> Enviando...';
+  const { error } = await cliente.auth.updateUser({ email: novoEmail });
+  btn.disabled = false; btn.innerHTML = '📧 Enviar link de confirmação';
+
+  if (error) { alertDiv.innerHTML = `<div class="alert alert-error">${error.message}</div>`; return; }
+  alertDiv.innerHTML = `<div class="alert alert-info">Link enviado! Verifique <strong>${novoEmail}</strong> para confirmar a alteração.</div>`;
+  document.getElementById('perfil-novo-email').value = '';
+}
+
+async function alterarSenhaPerfil() {
+  const btn         = document.getElementById('btn-alterar-senha');
+  const alertDiv    = document.getElementById('senha-alert');
+  const senhaAtual  = document.getElementById('perfil-senha-atual').value;
+  const novaSenha   = document.getElementById('perfil-nova-senha').value;
+  const confirmar   = document.getElementById('perfil-confirmar-senha').value;
+  alertDiv.innerHTML = '';
+
+  if (!senhaAtual) { alertDiv.innerHTML = `<div class="alert alert-error">Informe a senha atual.</div>`; return; }
+  if (!novaSenha)  { alertDiv.innerHTML = `<div class="alert alert-error">Informe a nova senha.</div>`; return; }
+  if (novaSenha.length < 6) { alertDiv.innerHTML = `<div class="alert alert-error">A nova senha deve ter pelo menos 6 caracteres.</div>`; return; }
+  if (novaSenha !== confirmar) { alertDiv.innerHTML = `<div class="alert alert-error">As senhas não coincidem.</div>`; return; }
+
+  btn.disabled = true; btn.innerHTML = '<span class="loading"></span> Verificando...';
+
+  // Verificar senha atual via re-autenticação
+  const { data: { user } } = await cliente.auth.getUser();
+  const { error: errLogin } = await cliente.auth.signInWithPassword({ email: user.email, password: senhaAtual });
+  if (errLogin) {
+    btn.disabled = false; btn.innerHTML = '🔒 Alterar Senha';
+    alertDiv.innerHTML = `<div class="alert alert-error">Senha atual incorreta.</div>`;
+    return;
+  }
+
+  btn.innerHTML = '<span class="loading"></span> Salvando...';
+  const { error } = await cliente.auth.updateUser({ password: novaSenha });
+  btn.disabled = false; btn.innerHTML = '🔒 Alterar Senha';
+
+  if (error) { alertDiv.innerHTML = `<div class="alert alert-error">${error.message}</div>`; return; }
+
+  document.getElementById('perfil-senha-atual').value   = '';
+  document.getElementById('perfil-nova-senha').value    = '';
+  document.getElementById('perfil-confirmar-senha').value = '';
+  alertDiv.innerHTML = `<div class="alert alert-success">✅ Senha alterada com sucesso!</div>`;
+  await registrarLog('alterar_senha', 'colaboradores', user.id, 'Senha alterada pelo colaborador');
 }
 
 // ============================================================

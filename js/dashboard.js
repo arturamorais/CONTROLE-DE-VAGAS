@@ -144,6 +144,42 @@ async function salvarPerfil() {
   showToast('✅ Perfil atualizado!');
 }
 
+async function alterarSenha() {
+  const btn        = document.getElementById('btn-alterar-senha');
+  const alertDiv   = document.getElementById('senha-alert');
+  const senhaAtual = document.getElementById('perfil-senha-atual').value;
+  const novaSenha  = document.getElementById('perfil-nova-senha').value;
+  const confirmar  = document.getElementById('perfil-confirmar-senha').value;
+  alertDiv.innerHTML = '';
+
+  if (!senhaAtual) { alertDiv.innerHTML = `<div class="alert alert-error">Informe a senha atual.</div>`; return; }
+  if (!novaSenha)  { alertDiv.innerHTML = `<div class="alert alert-error">Informe a nova senha.</div>`; return; }
+  if (novaSenha.length < 6) { alertDiv.innerHTML = `<div class="alert alert-error">A nova senha deve ter pelo menos 6 caracteres.</div>`; return; }
+  if (novaSenha !== confirmar) { alertDiv.innerHTML = `<div class="alert alert-error">As senhas não coincidem.</div>`; return; }
+
+  btn.disabled = true; btn.innerHTML = '<span class="loading"></span> Verificando...';
+
+  const { data: { user } } = await cliente.auth.getUser();
+  const { error: errLogin } = await cliente.auth.signInWithPassword({ email: user.email, password: senhaAtual });
+  if (errLogin) {
+    btn.disabled = false; btn.innerHTML = '🔒 Alterar Senha';
+    alertDiv.innerHTML = `<div class="alert alert-error">Senha atual incorreta.</div>`;
+    return;
+  }
+
+  btn.innerHTML = '<span class="loading"></span> Salvando...';
+  const { error } = await cliente.auth.updateUser({ password: novaSenha });
+  btn.disabled = false; btn.innerHTML = '🔒 Alterar Senha';
+
+  if (error) { alertDiv.innerHTML = `<div class="alert alert-error">${error.message}</div>`; return; }
+
+  document.getElementById('perfil-senha-atual').value    = '';
+  document.getElementById('perfil-nova-senha').value     = '';
+  document.getElementById('perfil-confirmar-senha').value = '';
+  alertDiv.innerHTML = `<div class="alert alert-success">✅ Senha alterada com sucesso!</div>`;
+  await registrarLog('alterar_senha', 'usuarios', user.id, 'Senha alterada pelo usuário');
+}
+
 async function alterarEmail() {
   const btn      = document.getElementById('btn-alterar-email');
   const alertDiv = document.getElementById('email-alert');
