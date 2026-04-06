@@ -1213,7 +1213,7 @@ function renderAlunosDetalhe(alunos, interesseId) {
         ${aprovado ? `
           <div id="aluno-enturma-${a.id}" style="background:${turmaInfo ? '#f0fdf4' : '#fefce8'};border:1px solid ${turmaInfo ? '#bbf7d0' : '#fde68a'};border-radius:0.5rem;padding:0.5rem 0.75rem;font-size:0.78rem;color:${turmaInfo ? '#15803d' : '#92400e'}">
             ${turmaInfo
-              ? `🏫 <strong>Enturmado:</strong> ${escapeHtml(turmaInfo)}`
+              ? `🏫 <strong>Enturmado:</strong> ${escapeHtml(turmaInfo)} — <span style="color:#0e7490">⏳ Aguardando finalização da matrícula</span>`
               : `⏳ <strong>Aguardando enturmação</strong> — aprovado mas ainda não alocado em nenhuma turma`}
           </div>` : ''}
 
@@ -1222,7 +1222,8 @@ function renderAlunosDetalhe(alunos, interesseId) {
             <span style="font-size:0.78rem;color:#0e7490;font-style:italic">✔ Matriculado — para reverter, cancele a solicitação.</span>
           ` : `
             ${!aprovado ? `<button class="btn btn-success btn-sm" onclick="aprovarAluno('${a.id}','${interesseId}')">✅ Aprovar</button>` : ''}
-            ${aprovado ? `<button class="btn btn-primary btn-sm" onclick="confirmarMatriculaAluno('${a.id}','${interesseId}')">🎓 Matricular</button>` : ''}
+            ${aprovado && turmaInfo ? `<button class="btn btn-primary btn-sm" onclick="confirmarMatriculaAluno('${a.id}','${interesseId}')">🎓 Matricular</button>` : ''}
+            ${aprovado && !turmaInfo ? `<button class="btn btn-primary btn-sm" disabled title="Enturme o aluno antes de matricular" style="opacity:0.45;cursor:not-allowed">🎓 Matricular</button>` : ''}
             ${!reprovado ? `<button class="btn btn-danger btn-sm" onclick="abrirReprovacaoAluno('${a.id}','${interesseId}')">✕ Reprovar</button>` : ''}
             ${(aprovado || reprovado) ? `<button class="btn btn-secondary btn-sm" onclick="resetarAluno('${a.id}','${interesseId}')">↩ Desfazer</button>` : ''}
           `}
@@ -1248,6 +1249,11 @@ async function confirmarMatriculaAluno(alunoId, interesseId) {
   const turmaInfo = alocacao?.turmas
     ? `${alocacao.turmas.serie} – ${alocacao.turmas.nome_turma} (${TURNO_LABEL_FULL[alocacao.turmas.turno] || alocacao.turmas.turno})`
     : null;
+
+  if (!turmaInfo) {
+    showToast('⚠️ Enturme o aluno antes de matricular.');
+    return;
+  }
 
   const nomeColaborador = document.getElementById('sidebar-nome').textContent.trim() || 'Colaborador';
   const txtTurma = turmaInfo ? `\n\nTurma: ${turmaInfo}` : '';
