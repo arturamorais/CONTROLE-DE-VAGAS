@@ -582,42 +582,56 @@ function fecharEditarColabModal() {
   document.getElementById('colab-edit-modal-overlay').classList.remove('active');
 }
 
-async function enviarConviteColab() {
+async function redefinirSenhaColab() {
+  const id       = document.getElementById('colab-edit-id').value;
   const email    = document.getElementById('colab-edit-email').value.trim();
+  const nome     = document.getElementById('colab-edit-nome').value.trim();
   const feedback = document.getElementById('colab-edit-link-feedback');
-  if (!email) { showToast('⚠️ Salve o e-mail antes de enviar.'); return; }
 
-  const { error } = await cliente.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin + '/reset-senha.html'
+  const { isConfirmed } = await Swal.fire({
+    icon: 'warning',
+    title: 'Gerar nova senha?',
+    html: `<p style="font-size:0.875rem;color:#475569">Uma nova senha temporária será gerada para <strong>${escapeHtml(nome)}</strong>. A senha atual deixará de funcionar.</p>`,
+    showCancelButton: true,
+    confirmButtonText: 'Sim, gerar',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#f97316'
   });
+  if (!isConfirmed) return;
 
-  if (error) { showToast('❌ Erro ao enviar: ' + error.message); return; }
+  const { data: senhaTmp, error } = await cliente.rpc('redefinir_senha_colaborador', { p_user_id: id });
+  if (error) { showToast('❌ Erro: ' + error.message); return; }
 
-  feedback.textContent = '✅ E-mail de acesso enviado para ' + email;
-  feedback.style.display = '';
-  await registrarLog('reenviar_convite_colaborador', 'colaboradores',
-    document.getElementById('colab-edit-id').value,
-    `Link de acesso reenviado para ${email}`);
-}
+  const urlAcesso = window.location.origin + '/index.html';
+  await registrarLog('redefinir_senha_colaborador', 'colaboradores', id, `Senha temporária gerada para ${email}`);
 
-async function copiarLinkConviteColab() {
-  const email    = document.getElementById('colab-edit-email').value.trim();
-  const feedback = document.getElementById('colab-edit-link-feedback');
-  if (!email) { showToast('⚠️ Salve o e-mail antes de copiar o link.'); return; }
+  feedback.style.display = 'none';
 
-  const { error } = await cliente.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin + '/reset-senha.html'
+  await Swal.fire({
+    icon: 'success',
+    title: '🔑 Nova senha gerada!',
+    html: `
+      <p style="font-size:0.875rem;color:#475569;margin-bottom:1rem;line-height:1.6">
+        Compartilhe as credenciais abaixo com <strong>${escapeHtml(nome)}</strong>.
+      </p>
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:0.5rem;padding:0.875rem;text-align:left;font-size:0.85rem">
+        <div style="margin-bottom:0.5rem"><span style="color:#64748b">E-mail:</span> <strong>${escapeHtml(email)}</strong></div>
+        <div><span style="color:#64748b">Senha temporária:</span> <strong style="font-family:monospace;letter-spacing:0.05em">${escapeHtml(senhaTmp)}</strong></div>
+      </div>
+      <div style="margin-top:0.75rem;font-size:0.8rem;color:#64748b">URL: <a href="${urlAcesso}" target="_blank">${urlAcesso}</a></div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '📋 Copiar credenciais',
+    cancelButtonText: 'Fechar',
+    confirmButtonColor: '#f97316'
+  }).then(r => {
+    if (r.isConfirmed) {
+      navigator.clipboard.writeText(
+        `Acesso ao sistema Colégio Plenus\nURL: ${urlAcesso}\nE-mail: ${email}\nSenha temporária: ${senhaTmp}`
+      );
+      showToast('📋 Credenciais copiadas!');
+    }
   });
-
-  const base = window.location.origin + '/reset-senha.html';
-  await navigator.clipboard.writeText(base);
-
-  if (error) {
-    feedback.textContent = '🔗 URL copiada: ' + base + ' (erro ao enviar e-mail: ' + error.message + ')';
-  } else {
-    feedback.textContent = '🔗 URL copiada: ' + base + ' (link também enviado ao e-mail)';
-  }
-  feedback.style.display = '';
 }
 
 async function salvarEdicaoColaborador() {
