@@ -506,68 +506,44 @@ async function salvarNovoColaborador() {
   const nome  = document.getElementById('colab-nome-input').value.trim();
   const email = document.getElementById('colab-email-input').value.trim().toLowerCase();
   const cargo = document.getElementById('colab-cargo-select').value;
-  const alert = document.getElementById('colab-modal-alert');
-  const btn   = document.getElementById('btn-salvar-colab');
+  const alertEl = document.getElementById('colab-modal-alert');
+  const btn     = document.getElementById('btn-salvar-colab');
 
-  alert.innerHTML = '';
-  if (!nome) {
-    alert.innerHTML = `<div class="alert alert-error">Informe o nome do colaborador.</div>`;
-    return;
-  }
-  if (!email) {
-    alert.innerHTML = `<div class="alert alert-error">Informe o e-mail do usuário.</div>`;
-    return;
-  }
+  alertEl.innerHTML = '';
+  if (!nome)  { alertEl.innerHTML = `<div class="alert alert-error">Informe o nome do colaborador.</div>`; return; }
+  if (!email) { alertEl.innerHTML = `<div class="alert alert-error">Informe o e-mail do colaborador.</div>`; return; }
 
-  btn.disabled = true;
-  btn.textContent = 'Buscando...';
+  btn.disabled = true; btn.innerHTML = '<span class="loading"></span> Criando...';
 
-  const { data: usuario } = await cliente
-    .from('usuarios')
-    .select('id')
-    .eq('email', email)
-    .single();
-
-  if (!usuario) {
-    alert.innerHTML = `<div class="alert alert-error">Usuário não encontrado. O usuário precisa se cadastrar no sistema primeiro.</div>`;
-    btn.disabled = false;
-    btn.innerHTML = '➕ Adicionar';
-    return;
-  }
-
-  // Verificar se já é colaborador
-  const { data: jaExiste } = await cliente
-    .from('colaboradores')
-    .select('id, ativo')
-    .eq('id', usuario.id)
-    .single();
-
-  if (jaExiste) {
-    alert.innerHTML = `<div class="alert alert-error">Este usuário já é um colaborador.</div>`;
-    btn.disabled = false;
-    btn.innerHTML = '➕ Adicionar';
-    return;
-  }
-
-  const { error } = await cliente.from('colaboradores').insert({
-    id:    usuario.id,
-    nome,
-    cargo,
-    ativo: true
+  // Criar colaborador via RPC (cria auth.users + usuarios + colaboradores)
+  const { data: novoId, error: errRpc } = await cliente.rpc('criar_colaborador', {
+    p_email: email,
+    p_nome:  nome,
+    p_cargo: cargo
   });
 
-  if (error) {
-    alert.innerHTML = `<div class="alert alert-error">Erro ao adicionar: ${error.message}</div>`;
-    btn.disabled = false;
-    btn.innerHTML = '➕ Adicionar';
+  if (errRpc) {
+    alertEl.innerHTML = `<div class="alert alert-error">Erro: ${errRpc.message}</div>`;
+    btn.disabled = false; btn.innerHTML = '➕ Adicionar';
     return;
   }
 
-  await registrarLog('adicionar_colaborador', 'colaboradores', usuario.id,
-    `Colaborador ${nome} (${email}) adicionado com cargo ${CARGO_LABEL[cargo]}`);
+  // Enviar e-mail de redefinição de senha para o colaborador criar a senha
+  const { error: errReset } = await cliente.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + '/reset-senha.html'
+  });
+
+  await registrarLog('adicionar_colaborador', 'colaboradores', novoId,
+    `Colaborador ${nome} (${email}) criado com cargo ${CARGO_LABEL[cargo]}`);
 
   fecharColabModal();
-  showToast('✅ Colaborador adicionado com sucesso!');
+
+  if (errReset) {
+    showToast(`✅ Colaborador criado! Não foi possível enviar o e-mail: ${errReset.message}`);
+  } else {
+    showToast(`✅ Colaborador criado! E-mail enviado para ${email} definir a senha.`);
+  }
+
   carregarColaboradores();
 }
 
