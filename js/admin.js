@@ -515,36 +515,56 @@ async function salvarNovoColaborador() {
 
   btn.disabled = true; btn.innerHTML = '<span class="loading"></span> Criando...';
 
-  // Criar colaborador via RPC (cria auth.users + usuarios + colaboradores)
-  const { data: novoId, error: errRpc } = await cliente.rpc('criar_colaborador', {
+  const { data: resultado, error: errRpc } = await cliente.rpc('criar_colaborador', {
     p_email: email,
     p_nome:  nome,
     p_cargo: cargo
   });
 
+  btn.disabled = false; btn.innerHTML = '➕ Adicionar';
+
   if (errRpc) {
     alertEl.innerHTML = `<div class="alert alert-error">Erro: ${errRpc.message}</div>`;
-    btn.disabled = false; btn.innerHTML = '➕ Adicionar';
     return;
   }
 
-  // Enviar e-mail de redefinição de senha para o colaborador criar a senha
-  const { error: errReset } = await cliente.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin + '/reset-senha.html'
-  });
+  const novoId      = resultado.id;
+  const senhaTmp    = resultado.senha_temporaria;
+  const urlAcesso   = window.location.origin + '/index.html';
 
   await registrarLog('adicionar_colaborador', 'colaboradores', novoId,
     `Colaborador ${nome} (${email}) criado com cargo ${CARGO_LABEL[cargo]}`);
 
   fecharColabModal();
-
-  if (errReset) {
-    showToast(`✅ Colaborador criado! Não foi possível enviar o e-mail: ${errReset.message}`);
-  } else {
-    showToast(`✅ Colaborador criado! E-mail enviado para ${email} definir a senha.`);
-  }
-
   carregarColaboradores();
+
+  // Exibe a senha temporária para o master compartilhar
+  await Swal.fire({
+    icon: 'success',
+    title: '✅ Colaborador criado!',
+    html: `
+      <p style="font-size:0.875rem;color:#475569;margin-bottom:1rem;line-height:1.6">
+        Compartilhe as credenciais abaixo com <strong>${escapeHtml(nome)}</strong>.
+        O colaborador poderá alterar a senha após o primeiro acesso.
+      </p>
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:0.5rem;padding:0.875rem;text-align:left;font-size:0.85rem">
+        <div style="margin-bottom:0.5rem"><span style="color:#64748b">E-mail:</span> <strong>${escapeHtml(email)}</strong></div>
+        <div><span style="color:#64748b">Senha temporária:</span> <strong id="swal-senha-tmp" style="font-family:monospace;letter-spacing:0.05em">${escapeHtml(senhaTmp)}</strong></div>
+      </div>
+      <div style="margin-top:0.75rem;font-size:0.8rem;color:#64748b">URL de acesso: <a href="${urlAcesso}" target="_blank">${urlAcesso}</a></div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '📋 Copiar credenciais',
+    cancelButtonText: 'Fechar',
+    confirmButtonColor: '#f97316'
+  }).then(r => {
+    if (r.isConfirmed) {
+      navigator.clipboard.writeText(
+        `Acesso ao sistema Colégio Plenus\nURL: ${urlAcesso}\nE-mail: ${email}\nSenha temporária: ${senhaTmp}`
+      );
+      showToast('📋 Credenciais copiadas!');
+    }
+  });
 }
 
 function abrirEditarColaborador(id) {
