@@ -1393,6 +1393,42 @@ async function confirmarReprovacaoAluno(alunoId, interesseId) {
 }
 
 async function resetarAluno(alunoId, interesseId) {
+  const s     = todasSolicitacoes.find(x => x.id === interesseId);
+  const aluno = s?.alunos?.find(a => a.id === alunoId);
+  const nome  = aluno?.nome_aluno || 'Aluno';
+
+  const alocacao  = aluno?.alocacoes?.[0];
+  const turmaInfo = alocacao?.turmas
+    ? `${alocacao.turmas.serie} – ${alocacao.turmas.nome_turma}`
+    : null;
+
+  // Confirmação com aviso de desenturmação se aplicável
+  const { isConfirmed } = await Swal.fire({
+    icon: 'warning',
+    title: `Desfazer status de ${escapeHtml(nome)}?`,
+    html: turmaInfo
+      ? `<p style="font-size:0.875rem;color:#475569;line-height:1.6">
+           O aluno voltará para <strong>Pendente</strong>.<br><br>
+           ⚠️ <strong>${escapeHtml(nome)}</strong> está enturmado em <strong>${escapeHtml(turmaInfo)}</strong> e será <strong>removido da turma</strong>.
+         </p>`
+      : `<p style="font-size:0.875rem;color:#475569;line-height:1.6">
+           O aluno voltará para <strong>Pendente</strong>.
+         </p>`,
+    showCancelButton: true,
+    confirmButtonText: 'Sim, desfazer',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#f97316'
+  });
+  if (!isConfirmed) return;
+
+  // Remover alocação se existir
+  if (alocacao?.id) {
+    const { error: errAloc } = await cliente.from('alocacoes').delete().eq('id', alocacao.id);
+    if (errAloc) { showToast('❌ Erro ao remover da turma: ' + errAloc.message); return; }
+    // Atualizar cache local
+    aluno.alocacoes = [];
+  }
+
   const { data: upd, error } = await cliente.from('alunos')
     .update({ status_aluno: 'pendente', motivo_reprovacao: null })
     .eq('id', alunoId)
@@ -1400,17 +1436,17 @@ async function resetarAluno(alunoId, interesseId) {
   if (error) { showToast('❌ Erro: ' + error.message); return; }
   if (!upd?.length) { showToast('❌ Sem permissão para atualizar este aluno. Verifique as políticas RLS.'); return; }
 
-  const s    = todasSolicitacoes.find(x => x.id === interesseId);
-  const aluno = s?.alunos?.find(a => a.id === alunoId);
   if (aluno) { aluno.status_aluno = 'pendente'; aluno.motivo_reprovacao = null; }
 
-  const nome = aluno?.nome_aluno || 'Aluno';
   const nomeColab = document.getElementById('sidebar-nome').textContent.trim() || 'Colaborador';
-  await registrarHistorico(interesseId, `Status do aluno "${nome}" revertido para Pendente.`, nomeColab);
+  const notaHist  = turmaInfo
+    ? `Status do aluno "${nome}" revertido para Pendente. Removido da turma ${turmaInfo}.`
+    : `Status do aluno "${nome}" revertido para Pendente.`;
+  await registrarHistorico(interesseId, notaHist, nomeColab);
   await atualizarStatusGeral(interesseId);
 
   recarregarAlunosDetalhe(interesseId);
-  showToast(`↩ ${nome} voltou para Pendente.`);
+  showToast(turmaInfo ? `↩ ${nome} voltou para Pendente e foi removido da turma.` : `↩ ${nome} voltou para Pendente.`);
 }
 
 // Status dos alunos → só atualiza a solicitação se TODOS estiverem aprovados
