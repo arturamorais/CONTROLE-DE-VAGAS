@@ -69,6 +69,11 @@ async function cadastrar() {
   const telefone = document.getElementById('telefoneCadastro').value.trim();
   const senha    = document.getElementById('senhaCadastro').value;
 
+  if (telefone && !validarTelefone(telefone)) {
+    Swal.fire({ icon: 'error', title: 'Telefone inválido', text: 'Informe um número válido no formato (00) 00000-0000.', confirmButtonColor: '#1a56db' });
+    return;
+  }
+
   const { data, error } = await cliente.auth.signUp({ email, password: senha });
   if (error) {
     Swal.fire({ icon: 'error', title: 'Erro no cadastro', text: error.message, confirmButtonColor: '#1a56db' });

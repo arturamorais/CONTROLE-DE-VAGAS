@@ -1195,7 +1195,7 @@ async function confirmarMatriculaAluno(alunoId, interesseId) {
 
   await carregarSolicitacoes();
   await carregarStats();
-  abrirModal(interesseId);
+  abrirDetalhe(interesseId);
 }
 
 async function aprovarAluno(alunoId, interesseId) {
@@ -2623,6 +2623,9 @@ async function salvarResponsavel() {
   alertEl.innerHTML = '';
   if (!nome)  { alertEl.innerHTML = `<div class="alert alert-error">Informe o nome.</div>`; return; }
   if (!email) { alertEl.innerHTML = `<div class="alert alert-error">Informe o e-mail.</div>`; return; }
+  if (telefone && !validarTelefone(telefone)) {
+    alertEl.innerHTML = `<div class="alert alert-error">Telefone inválido. Use o formato (00) 00000-0000.</div>`; return;
+  }
 
   btn.disabled = true; btn.textContent = 'Salvando...';
   const { error } = await cliente.from('usuarios').update({ nome, email, telefone }).eq('id', id);
@@ -3153,6 +3156,12 @@ async function salvarPerfil() {
   const { data: { user } } = await cliente.auth.getUser();
   const nome     = document.getElementById('perfil-nome').value.trim();
   const telefone = document.getElementById('perfil-telefone').value.trim();
+
+  if (telefone && !validarTelefone(telefone)) {
+    alertDiv.innerHTML = `<div class="alert alert-error">Telefone inválido. Use o formato (00) 00000-0000.</div>`;
+    return;
+  }
+
   btn.disabled  = true;
   btn.innerHTML = '<span class="loading"></span> Salvando...';
 

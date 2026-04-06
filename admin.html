@@ -120,7 +120,7 @@
         </div>
         <div class="form-group full-width">
           <label>Telefone</label>
-          <input type="text" id="cad-resp-telefone" placeholder="(00) 00000-0000">
+          <input type="tel" id="cad-resp-telefone" placeholder="(00) 00000-0000" oninput="formatarTelefone(this)" maxlength="15">
         </div>
       </div>
 
@@ -934,7 +934,7 @@
           </div>
           <div class="form-group">
             <label for="perfil-telefone">Telefone / WhatsApp</label>
-            <input type="tel" id="perfil-telefone" placeholder="(00) 00000-0000">
+            <input type="tel" id="perfil-telefone" placeholder="(00) 00000-0000" oninput="formatarTelefone(this)" maxlength="15">
           </div>
         </div>
 

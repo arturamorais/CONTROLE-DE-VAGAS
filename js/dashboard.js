@@ -127,6 +127,12 @@ async function salvarPerfil() {
   const { data: { user } } = await cliente.auth.getUser();
   const nome     = document.getElementById('perfil-nome').value.trim();
   const telefone = document.getElementById('perfil-telefone').value.trim();
+
+  if (telefone && !validarTelefone(telefone)) {
+    alertDiv.innerHTML = `<div class="alert alert-error">Telefone inválido. Use o formato (00) 00000-0000.</div>`;
+    return;
+  }
+
   btn.disabled = true;
   btn.innerHTML = '<span class="loading"></span> Salvando...';
   const { error } = await cliente.from('usuarios').upsert({ id: user.id, nome, telefone });
