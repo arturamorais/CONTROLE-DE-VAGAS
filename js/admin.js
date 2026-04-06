@@ -864,15 +864,39 @@ async function carregarSolicitacoes() {
   const container = document.getElementById('solicitacoes-list');
   container.innerHTML = `<div class="empty-state"><span class="empty-icon">⏳</span><p>Carregando...</p></div>`;
 
-  const { data: solicitacoes, error } = await cliente
-    .from('interesse_vagas')
-    .select('*, alunos(*, alocacoes(id, turmas(nome_turma, serie, segmento, turno)))')
-    .order('created_at', { ascending: false });
+  const [
+    { data: solicitacoes, error },
+    { data: todosAlunos },
+    { data: todasAlocacoes },
+    { data: todasTurmasData }
+  ] = await Promise.all([
+    cliente.from('interesse_vagas').select('*').order('created_at', { ascending: false }),
+    cliente.from('alunos').select('*'),
+    cliente.from('alocacoes').select('id, aluno_id, turma_id'),
+    cliente.from('turmas').select('id, nome_turma, serie, segmento, turno')
+  ]);
 
   if (error) {
     container.innerHTML = `<div class="alert alert-error">Erro: ${error.message}</div>`;
     return;
   }
+
+  // Montar mapas para cross-reference
+  const turmaMap   = Object.fromEntries((todasTurmasData || []).map(t => [t.id, t]));
+  const alocMap    = {};
+  (todasAlocacoes || []).forEach(al => {
+    alocMap[al.aluno_id] = { id: al.id, turma_id: al.turma_id, turmas: turmaMap[al.turma_id] || null };
+  });
+
+  // Agrupar alunos por interesse_id e injetar alocações
+  const alunosPorSolic = {};
+  (todosAlunos || []).forEach(a => {
+    if (!alunosPorSolic[a.interesse_id]) alunosPorSolic[a.interesse_id] = [];
+    alunosPorSolic[a.interesse_id].push({
+      ...a,
+      alocacoes: alocMap[a.id] ? [alocMap[a.id]] : []
+    });
+  });
 
   // Buscar perfis dos responsáveis
   const ids = [...new Set((solicitacoes || []).map(s => s.usuario_id))];
@@ -883,6 +907,7 @@ async function carregarSolicitacoes() {
 
   todasSolicitacoes = (solicitacoes || []).map(s => ({
     ...s,
+    alunos: alunosPorSolic[s.id] || [],
     responsavel: pm[s.usuario_id] || {}
   }));
 
