@@ -148,7 +148,7 @@ async function init() {
   document.getElementById('perfil-nome').value           = colab.nome;
 
   // Carregar telefone do perfil
-  const { data: uData } = await cliente.from('usuarios').select('telefone').eq('id', user.id).single();
+  const { data: uData } = await cliente.from('usuarios').select('telefone').eq('id', user.id).maybeSingle();
   if (uData?.telefone) document.getElementById('perfil-telefone').value = uData.telefone;
 
   // Revelar itens do nav conforme permissões do cargo
@@ -2571,8 +2571,8 @@ async function carregarResponsaveis() {
 
   const [
     { data: users,  error: errUsers },
-    { data: solics, error: errSolics },
-    { data: alunos, error: errAlunos }
+    { data: solics },
+    { data: alunos }
   ] = await Promise.all([
     cliente.from('usuarios').select('id, nome, email, telefone, criado_em').order('nome'),
     cliente.from('interesse_vagas').select('id, usuario_id'),
