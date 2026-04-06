@@ -1320,10 +1320,12 @@ async function confirmarMatriculaAluno(alunoId, interesseId) {
 
   // Se todos os alunos agora estão matriculados, muda a solicitação para matriculado
   if (outrosNaoMatr.length === 0) {
-    const { error: errSolic } = await cliente.from('interesse_vagas')
+    const { data: updSolic, error: errSolic } = await cliente.from('interesse_vagas')
       .update({ status: 'matriculado' })
-      .eq('id', interesseId);
+      .eq('id', interesseId)
+      .select('id');
     if (errSolic) { showToast('❌ Erro ao confirmar solicitação: ' + errSolic.message); return; }
+    if (!updSolic?.length) { showToast('❌ Sem permissão para atualizar a solicitação. Verifique as políticas RLS.'); return; }
     if (sol) sol.status = 'matriculado';
     await registrarHistorico(interesseId, nota, nomeColaborador);
     await registrarLog('matricular_aluno', 'alunos', alunoId, `${aluno.nome_aluno} matriculado — solicitação concluída`);
@@ -1830,6 +1832,16 @@ async function executarAtualizacaoStatus(id, novoStatus) {
     await cliente.from('alunos').update({ status_aluno: statusAluno, motivo_reprovacao: null })
       .in('id', alunosAfetados.map(a => a.id));
     alunosAfetados.forEach(a => { a.status_aluno = statusAluno; a.motivo_reprovacao = null; });
+  }
+
+  // Ao cancelar: remove alocações de todos os alunos enturmados
+  if (novoStatus === 'cancelado') {
+    const alunosEnturmados = todosAlunos.filter(a => a.alocacoes?.[0]?.id);
+    if (alunosEnturmados.length > 0) {
+      const alocIds = alunosEnturmados.map(a => a.alocacoes[0].id);
+      await cliente.from('alocacoes').delete().in('id', alocIds);
+      alunosEnturmados.forEach(a => { a.alocacoes = []; });
+    }
   }
 
   // Registra mudança de status no histórico
