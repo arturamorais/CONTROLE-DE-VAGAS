@@ -3249,15 +3249,16 @@ async function salvarPerfil() {
   btn.disabled  = true;
   btn.innerHTML = '<span class="loading"></span> Salvando...';
 
-  const { error } = await cliente
-    .from('colaboradores')
-    .update({ nome, telefone })
-    .eq('id', user.id);
+  const [{ error: errColab }, { error: errUsuario }] = await Promise.all([
+    cliente.from('colaboradores').update({ nome }).eq('id', user.id),
+    cliente.from('usuarios').update({ telefone }).eq('id', user.id)
+  ]);
 
   btn.disabled  = false;
   btn.innerHTML = '💾 Salvar Alterações';
 
-  if (error) { alertDiv.innerHTML = `<div class="alert alert-error">${error.message}</div>`; return; }
+  if (errColab)   { alertDiv.innerHTML = `<div class="alert alert-error">${errColab.message}</div>`; return; }
+  if (errUsuario) { alertDiv.innerHTML = `<div class="alert alert-error">${errUsuario.message}</div>`; return; }
 
   document.getElementById('sidebar-nome').textContent         = nome;
   document.getElementById('profile-nome-display').textContent = nome;
