@@ -1073,10 +1073,10 @@ function abrirDetalhe(id) {
   document.getElementById('modal-content').innerHTML = `
 
     <!-- Cabeçalho colorido por status -->
-    <div class="modal-head-${s.status}" style="padding:1.25rem 1.5rem 1rem;border-bottom:1px solid var(--gray-light)">
+    <div id="modal-detalhe-head" class="modal-head-${s.status}" style="padding:1.25rem 1.5rem 1rem;border-bottom:1px solid var(--gray-light)">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem">
         <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.4rem">
+          <div id="modal-status-row" style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.4rem">
             <span class="status-badge status-${s.status}">${badgeLabel}</span>
             ${gerarBotoesStatus(s.status, id)}
           </div>
@@ -1091,10 +1091,10 @@ function abrirDetalhe(id) {
       </div>
     </div>
 
-    ${temRessalva ? `
+    <div id="modal-ressalva-banner">${temRessalva ? `
     <div style="background:#fef3c7;border-bottom:2px solid #fde68a;padding:0.5rem 1.5rem;font-size:0.8rem;color:#92400e;line-height:1.5">
       ⚠️ <strong>Aprovada com ressalvas:</strong> ${aprov} de ${totalAlunos} aluno${totalAlunos !== 1 ? 's' : ''} aprovado${aprov !== 1 ? 's' : ''}${reprov > 0 ? ` · ${reprov} reprovado${reprov !== 1 ? 's' : ''}` : ''}.
-    </div>` : ''}
+    </div>` : ''}</div>
 
     <!-- Abas -->
     <div class="detalhe-tabs-wrap">
@@ -1883,6 +1883,7 @@ async function resetarAluno(alunoId, interesseId) {
     await registrarHistorico(interesseId, 'Solicitação revertida para Em Análise — reavaliação necessária.', nomeColab);
     await carregarStats();
     await carregarUltimasSolicitacoes();
+    filtrarSolicitacoes();
   } else {
     await atualizarStatusGeral(interesseId);
   }
@@ -1895,29 +1896,81 @@ async function resetarAluno(alunoId, interesseId) {
 async function atualizarStatusGeral(interesseId) {
   const s = todasSolicitacoes.find(x => x.id === interesseId);
   if (!s?.alunos?.length) return;
+  if (!['em_analise', 'aprovado'].includes(s.status)) return;
 
   const statuses    = s.alunos.map(a => a.status_aluno || 'pendente');
-  const todosAprovados = statuses.every(st => st === 'aprovado');
+  const temPendente = statuses.some(st => st === 'pendente');
+  if (temPendente) return; // ainda há alunos pendentes — permanece em análise
 
-  if (!todosAprovados) return; // só age se todos aprovados
-  if (s.status === 'aprovado' || s.status === 'matriculado') return; // já está aprovado/matriculado
+  const todosAprov  = statuses.every(st => st === 'aprovado');
+  const todosReprov = statuses.every(st => st === 'reprovado');
+  const algumAprov  = statuses.some(st => st === 'aprovado');
+  const algumReprov = statuses.some(st => st === 'reprovado');
+
+  let novoStatus = null;
+  if (todosAprov)                    novoStatus = 'aprovado';
+  else if (todosReprov)              novoStatus = 'reprovado';
+  else if (algumAprov && algumReprov) novoStatus = 'aprovado'; // aprovada com ressalvas
+
+  if (!novoStatus || s.status === novoStatus) return;
 
   const { error } = await cliente.from('interesse_vagas')
-    .update({ status: 'aprovado' }).eq('id', interesseId);
+    .update({ status: novoStatus }).eq('id', interesseId);
   if (error) return;
 
-  s.status = 'aprovado';
+  s.status = novoStatus;
   const nomeColab = document.getElementById('sidebar-nome')?.textContent.trim() || 'Sistema';
-  await registrarHistorico(interesseId, 'Todos os alunos aprovados — solicitação promovida automaticamente para Aprovada.', nomeColab);
+  const nAprov  = statuses.filter(st => st === 'aprovado').length;
+  const nReprov = statuses.filter(st => st === 'reprovado').length;
+  let msg;
+  if (todosAprov)       msg = 'Todos os alunos aprovados — solicitação promovida automaticamente para Aprovada.';
+  else if (todosReprov) msg = 'Todos os alunos reprovados — solicitação encerrada como Reprovada automaticamente.';
+  else                  msg = `Solicitação aprovada com ressalvas — ${nAprov} aluno(s) aprovado(s), ${nReprov} reprovado(s).`;
+
+  await registrarHistorico(interesseId, msg, nomeColab);
   await carregarStats();
   await carregarUltimasSolicitacoes();
   filtrarSolicitacoes();
+}
+
+function atualizarCabecalhoModal(interesseId) {
+  const s = todasSolicitacoes.find(x => x.id === interesseId);
+  const headEl    = document.getElementById('modal-detalhe-head');
+  const rowEl     = document.getElementById('modal-status-row');
+  const bannerEl  = document.getElementById('modal-ressalva-banner');
+  if (!s || !headEl || !rowEl) return;
+
+  const alunos      = s.alunos || [];
+  const totalAlunos = alunos.length;
+  const aprov       = alunos.filter(a => (a.status_aluno || 'pendente') === 'aprovado').length;
+  const reprov      = alunos.filter(a => (a.status_aluno || 'pendente') === 'reprovado').length;
+  const matrAlunos  = alunos.filter(a => (a.status_aluno || 'pendente') === 'matriculado').length;
+  const temRessalva = s.status === 'aprovado' && totalAlunos > 0 && (aprov + matrAlunos) < totalAlunos;
+  const badgeLabel  = temRessalva ? 'Aprovada com ressalvas' : STATUS_LABEL[s.status];
+
+  // Atualiza classe de cor do cabeçalho
+  headEl.className = `modal-head-${s.status}`;
+
+  // Atualiza badge + botões de status
+  rowEl.innerHTML = `
+    <span class="status-badge status-${s.status}">${badgeLabel}</span>
+    ${gerarBotoesStatus(s.status, interesseId)}
+  `;
+
+  // Atualiza banner de ressalva
+  if (bannerEl) {
+    bannerEl.innerHTML = temRessalva ? `
+    <div style="background:#fef3c7;border-bottom:2px solid #fde68a;padding:0.5rem 1.5rem;font-size:0.8rem;color:#92400e;line-height:1.5">
+      ⚠️ <strong>Aprovada com ressalvas:</strong> ${aprov} de ${totalAlunos} aluno${totalAlunos !== 1 ? 's' : ''} aprovado${aprov !== 1 ? 's' : ''}${reprov > 0 ? ` · ${reprov} reprovado${reprov !== 1 ? 's' : ''}` : ''}.
+    </div>` : '';
+  }
 }
 
 function recarregarAlunosDetalhe(interesseId) {
   const s = todasSolicitacoes.find(x => x.id === interesseId);
   const container = document.getElementById('alunos-detalhe-lista');
   if (!container || !s) return;
+  atualizarCabecalhoModal(interesseId);
   container.innerHTML = renderAlunosDetalhe(s.alunos || [], interesseId);
   carregarHistoricoModal(interesseId);
 }
