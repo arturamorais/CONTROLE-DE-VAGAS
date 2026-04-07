@@ -1919,6 +1919,20 @@ async function registrarHistorico(interesseId, descricao, nomeAutor) {
   } catch { /* não deve quebrar o fluxo */ }
 }
 
+function toggleVerMais(btn) {
+  const desc = btn.previousElementSibling;
+  const collapsed = desc.classList.toggle('h-collapsed');
+  btn.textContent = collapsed ? 'ver mais ▾' : 'ver menos ▴';
+}
+
+function _histDescHtml(descricao) {
+  const escaped = escapeHtml(descricao || '');
+  const isLong  = (descricao || '').length > 120 || (descricao || '').includes('\n');
+  if (!isLong) return `<span class="historico-desc">${escaped}</span>`;
+  return `<span class="historico-desc h-collapsed">${escaped}</span>`
+       + `<button class="ver-mais-btn" onclick="toggleVerMais(this)">ver mais ▾</button>`;
+}
+
 async function carregarHistoricoModal(id) {
   const container = document.getElementById('historico-lista');
   if (!container) return;
@@ -1939,7 +1953,7 @@ async function carregarHistoricoModal(id) {
     <div class="historico-item">
       <div class="historico-dot ${h.autor_tipo}"></div>
       <div class="historico-info">
-        <span class="historico-desc">${escapeHtml(h.descricao)}</span>
+        ${_histDescHtml(h.descricao)}
         <span class="historico-meta">
           ${new Date(h.created_at).toLocaleString('pt-BR')} · ${escapeHtml(h.autor_nome)}
         </span>
