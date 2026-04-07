@@ -353,6 +353,25 @@ function clearChips(groupId) {
     .forEach(c => c.classList.remove('chip-active'));
 }
 
+// Restaura chips selecionados a partir do valor salvo e coloca o restante no textarea
+function restoreChips(groupId, textoId, savedValue) {
+  clearChips(groupId);
+  const el = document.getElementById(textoId);
+  if (!savedValue) { if (el) el.value = ''; return; }
+
+  const chips     = Array.from(document.querySelectorAll(`#${groupId} [data-value]`));
+  const chipVals  = new Set(chips.map(c => c.dataset.value));
+  const partes    = savedValue.replace(/\n/g, '; ').split('; ').map(p => p.trim()).filter(Boolean);
+  const naoChips  = [];
+
+  for (const parte of partes) {
+    const chip = chips.find(c => c.dataset.value === parte);
+    if (chip) chip.classList.add('chip-active');
+    else if (!chipVals.has(parte)) naoChips.push(parte);
+  }
+  if (el) el.value = naoChips.join('; ');
+}
+
 // ============================================================
 //  CAMPO MOEDA (estilo app bancário)
 // ============================================================
@@ -476,16 +495,16 @@ async function editarSolicitacao(id) {
   _dadosOriginaisEdicao = data;
 
   // Preencher campos gerais
-  document.getElementById('motivo-transferencia').value = data.motivo_transferencia  || '';
-  document.getElementById('motivo-plenus').value        = data.motivo_escolha_plenus || '';
+  restoreChips('chips-motivo-transferencia', 'motivo-transferencia', data.motivo_transferencia  || '');
+  restoreChips('chips-motivo-plenus',        'motivo-plenus',        data.motivo_escolha_plenus || '');
   setMoeda(document.getElementById('valor-mensalidade'), data.valor_mensalidade_anterior);
-  document.getElementById('taxa-desconto').value        = data.taxa_desconto_almejada    || '';
-  document.getElementById('toggle-desconto').checked    = data.tem_desconto || false;
+  document.getElementById('taxa-desconto').value     = data.taxa_desconto_almejada || '';
+  document.getElementById('toggle-desconto').checked = data.tem_desconto || false;
   toggleDesconto();
-  document.getElementById('descricao-desconto').value   = data.descricao_desconto  || '';
-  document.getElementById('tipo-permuta').value         = data.tipo_permuta        || 'nao';
+  restoreChips('chips-desconto', 'descricao-desconto', data.descricao_desconto || '');
+  document.getElementById('tipo-permuta').value  = data.tipo_permuta    || 'nao';
   togglePermuta();
-  document.getElementById('descricao-permuta').value    = data.descricao_permuta   || '';
+  document.getElementById('descricao-permuta').value = data.descricao_permuta || '';
 
   // Recriar alunos
   document.getElementById('alunos-list').innerHTML = '';
@@ -609,11 +628,11 @@ async function enviarSolicitacao() {
 
   const chipsTransf = getChipsText('chips-motivo-transferencia');
   const textoTransf = document.getElementById('motivo-transferencia').value.trim();
-  const motivoTransferencia = [chipsTransf, textoTransf].filter(Boolean).join('\n');
+  const motivoTransferencia = [chipsTransf, textoTransf].filter(Boolean).join('; ');
 
   const chipsPlenus = getChipsText('chips-motivo-plenus');
   const textoPlenus = document.getElementById('motivo-plenus').value.trim();
-  const motivoPlenus = [chipsPlenus, textoPlenus].filter(Boolean).join('\n');
+  const motivoPlenus = [chipsPlenus, textoPlenus].filter(Boolean).join('; ');
 
   if (!motivoTransferencia)
     return setAlert(alertDiv, 'Selecione ao menos um motivo de transferência ou preencha o campo de informações adicionais.', 'error');
@@ -647,7 +666,7 @@ async function enviarSolicitacao() {
     motivo_escolha_plenus:      motivoPlenus,
     valor_mensalidade_anterior: parseMoeda(document.getElementById('valor-mensalidade').value),
     tem_desconto:               temDesconto,
-    descricao_desconto:         temDesconto ? (() => { const c = getChipsText('chips-desconto'); const t = document.getElementById('descricao-desconto').value.trim(); return [c, t].filter(Boolean).join('\n') || null; })() : null,
+    descricao_desconto:         temDesconto ? (() => { const c = getChipsText('chips-desconto'); const t = document.getElementById('descricao-desconto').value.trim(); return [c, t].filter(Boolean).join('; ') || null; })() : null,
     taxa_desconto_almejada:     parseFloat(document.getElementById('taxa-desconto').value) || null,
     tipo_permuta:               tipoPermuta,
     descricao_permuta:          tipoPermuta !== 'nao' ? (document.getElementById('descricao-permuta').value.trim() || null) : null
