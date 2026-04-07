@@ -24,6 +24,19 @@
 <!-- OVERLAY mobile -->
 <div id="overlay" class="overlay" onclick="closeSidebar()"></div>
 
+<!-- MODAL detalhe da solicitação (responsável) -->
+<div id="resp-detalhe-overlay" class="modal-overlay" onclick="if(event.target===this)fecharDetalheResp()" style="z-index:600">
+  <div class="modal-box" style="max-width:680px;max-height:90vh;display:flex;flex-direction:column">
+    <div class="modal-header">
+      <h2 style="font-size:1rem;margin:0">📋 Resumo da Solicitação</h2>
+      <button class="btn-modal-close" onclick="fecharDetalheResp()">✕</button>
+    </div>
+    <div class="modal-body" id="resp-det-body" style="overflow-y:auto;flex:1;padding:1.375rem 1.5rem">
+      <!-- preenchido por JS -->
+    </div>
+  </div>
+</div>
+
 <div id="app">
 
   <!-- =================== SIDEBAR =================== -->

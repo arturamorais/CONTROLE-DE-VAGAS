@@ -27,6 +27,7 @@ const STATUS_LABEL = {
 let alunoCounter          = 0;
 let modoEdicao            = false;
 let solicitacaoEditandoId = null;
+let _solicitacoesResp     = [];
 
 // ============================================================
 //  LOGGING
@@ -639,6 +640,7 @@ async function carregarSolicitacoes() {
     .eq('usuario_id', user.id).order('created_at', { ascending: false });
 
   if (error) { container.innerHTML = `<div class="alert alert-error">Erro: ${error.message}</div>`; return; }
+  _solicitacoesResp = data || [];
 
   if (!data?.length) {
     container.innerHTML = `
@@ -725,12 +727,145 @@ async function carregarSolicitacoes() {
           ${historicoHtml}
         </div>
         <div class="solicitacao-meta" style="display:flex;flex-direction:column;align-items:flex-end;gap:0.5rem;flex-shrink:0">
-          ${podeEditar
-            ? `<button class="btn btn-secondary btn-sm" onclick="editarSolicitacao('${s.id}')">✏️ Editar</button>`
-            : `<span style="font-size:0.72rem;color:var(--gray);font-style:italic">Somente leitura</span>`}
+          <button class="btn btn-secondary btn-sm" onclick="abrirDetalheResp('${s.id}')">🔍 Ver detalhes</button>
+          ${podeEditar ? `<button class="btn btn-secondary btn-sm" onclick="editarSolicitacao('${s.id}')">✏️ Editar</button>` : ''}
         </div>
       </div>`;
   }).join('');
+}
+
+// ============================================================
+//  MODAL DETALHE (RESPONSÁVEL)
+// ============================================================
+function abrirDetalheResp(id) {
+  const s = _solicitacoesResp.find(x => x.id === id);
+  if (!s) return;
+
+  const alunos  = s.alunos || [];
+  const dataFmt = new Date(s.created_at).toLocaleString('pt-BR');
+
+  const TURNO_LBL   = { manha: '☀️ Manhã', tarde: '🌤️ Tarde', tanto_faz: '🔄 Tanto faz' };
+  const PERMUTA_LBL = { nao: 'Não possui', parcial: 'Permuta parcial', completa: 'Permuta completa' };
+  const ST_ALUNO    = {
+    pendente:    { bg: '#fef3c7', color: '#92400e', border: '#fde68a', label: 'Pendente'   },
+    aprovado:    { bg: '#dcfce7', color: '#15803d', border: '#bbf7d0', label: 'Aprovado'   },
+    reprovado:   { bg: '#fee2e2', color: '#dc2626', border: '#fecaca', label: 'Reprovado'  },
+    matriculado: { bg: '#ecfeff', color: '#0e7490', border: '#a5f3fc', label: 'Matriculado'}
+  };
+  const totalAlunos = alunos.length;
+  const aprov       = alunos.filter(a => a.status_aluno === 'aprovado').length;
+  const matr        = alunos.filter(a => a.status_aluno === 'matriculado').length;
+  const temRessalva = s.status === 'aprovado' && totalAlunos > 0 && (aprov + matr) < totalAlunos;
+  const badgeLabel  = temRessalva ? 'Aprovada com ressalvas' : (STATUS_LABEL[s.status] || s.status);
+
+  // Alunos
+  const alunosHtml = alunos.length ? alunos.map(a => {
+    const st = ST_ALUNO[a.status_aluno] || ST_ALUNO['pendente'];
+    return `
+      <div style="display:flex;align-items:center;gap:0.625rem;padding:0.625rem 0.875rem;border:1.5px solid var(--gray-light);border-left:4px solid ${st.border};border-radius:var(--radius-sm);background:white">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:0.875rem;color:var(--navy-mid)">${escapeHtmlDash(a.nome_aluno)}</div>
+          <div style="font-size:0.75rem;color:var(--gray-dark);margin-top:0.1rem">${SEGMENTO_LABEL[a.segmento] || a.segmento} · ${escapeHtmlDash(a.turma)} · ${TURNO_LBL[a.turno] || a.turno}</div>
+        </div>
+        <span style="font-size:0.67rem;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;padding:0.25rem 0.625rem;border-radius:9999px;background:${st.bg};color:${st.color};border:1px solid ${st.border};white-space:nowrap">${st.label}</span>
+      </div>`;
+  }).join('') : '<p style="font-size:0.85rem;color:var(--gray)">Nenhum aluno cadastrado.</p>';
+
+  // Financeiro informado pelo responsável
+  const finHtml = `
+    <div class="fin-section">
+      <div class="fin-section-header resp-header">📋 Informado por você</div>
+      <div class="fin-section-grid">
+        <div class="fin-section-item">
+          <div class="fin-section-label">Mensalidade Atual</div>
+          <div class="fin-section-value"><span style="font-size:1rem;font-weight:800;color:var(--navy-mid)">${s.valor_mensalidade_anterior ? Number(s.valor_mensalidade_anterior).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}) : '–'}</span></div>
+        </div>
+        <div class="fin-section-item">
+          <div class="fin-section-label">Desconto Almejado</div>
+          <div class="fin-section-value"><span style="font-size:1rem;font-weight:800;color:var(--navy-mid)">${s.taxa_desconto_almejada ? s.taxa_desconto_almejada + '%' : '–'}</span></div>
+        </div>
+        <div class="fin-section-item">
+          <div class="fin-section-label">Possui Desconto Atual?</div>
+          <div class="fin-section-value">${s.tem_desconto ? '✅ Sim' : '❌ Não'}</div>
+          ${s.tem_desconto && s.descricao_desconto ? `<div style="font-size:0.78rem;color:var(--gray-dark);margin-top:0.3rem">${escapeHtmlDash(s.descricao_desconto)}</div>` : ''}
+        </div>
+        <div class="fin-section-item">
+          <div class="fin-section-label">Permuta</div>
+          <div class="fin-section-value">${PERMUTA_LBL[s.tipo_permuta] || '–'}</div>
+          ${s.tipo_permuta !== 'nao' && s.descricao_permuta ? `<div style="font-size:0.78rem;color:var(--gray-dark);margin-top:0.3rem">${escapeHtmlDash(s.descricao_permuta)}</div>` : ''}
+        </div>
+      </div>
+    </div>`;
+
+  // Decisão da escola
+  const temDecisao = s.desconto_concedido || (s.permuta_aceita !== null && s.permuta_aceita !== undefined);
+  const decisaoHtml = temDecisao ? `
+    <div class="fin-section">
+      <div class="fin-section-header escola-header">🏫 Decisão da Escola</div>
+      <div class="fin-section-grid">
+        ${s.desconto_concedido ? `
+        <div class="fin-section-item">
+          <div class="fin-section-label">Desconto Concedido</div>
+          <div class="fin-section-value"><span style="font-weight:700;color:#15803d">${escapeHtmlDash(s.desconto_concedido)}</span></div>
+        </div>` : ''}
+        ${s.permuta_aceita !== null && s.permuta_aceita !== undefined ? `
+        <div class="fin-section-item">
+          <div class="fin-section-label">Permuta</div>
+          <div class="fin-section-value"><span style="font-weight:700;color:${s.permuta_aceita ? '#15803d' : '#dc2626'}">${s.permuta_aceita ? '✅ Aceita' : '❌ Não aceita'}</span></div>
+          ${s.permuta_aceita && s.condicoes_permuta_aceita ? `<div style="font-size:0.78rem;color:var(--gray-dark);margin-top:0.3rem">${escapeHtmlDash(s.condicoes_permuta_aceita)}</div>` : ''}
+        </div>` : ''}
+      </div>
+    </div>` : '';
+
+  document.getElementById('resp-det-body').innerHTML = `
+    <!-- Header -->
+    <div class="${'modal-head-' + s.status}" style="padding:1rem 1.25rem;border-bottom:1px solid var(--gray-light);margin:-1.375rem -1.5rem 1.25rem">
+      <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.3rem">
+        <span class="status-badge status-${s.status}">${badgeLabel}</span>
+        <span style="font-size:0.75rem;color:var(--gray)">📅 ${dataFmt}</span>
+      </div>
+    </div>
+
+    ${temRessalva ? `
+    <div style="background:#fef3c7;border:1px solid #fde68a;border-left:3px solid #f59e0b;border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:0.5rem 0.75rem;font-size:0.8rem;color:#92400e;margin-bottom:1rem">
+      ⚠️ <strong>Aprovada com ressalvas:</strong> ${aprov} de ${totalAlunos} aluno${totalAlunos !== 1 ? 's' : ''} aprovado${aprov !== 1 ? 's' : ''}.
+    </div>` : ''}
+
+    <!-- Alunos -->
+    <div style="margin-bottom:1.25rem">
+      <div style="font-size:0.67rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--gray);margin-bottom:0.625rem">🎒 Alunos</div>
+      <div style="display:flex;flex-direction:column;gap:0.5rem">${alunosHtml}</div>
+    </div>
+
+    <!-- Motivos -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.875rem;margin-bottom:1.25rem">
+      <div class="detalhe-section" style="margin:0">
+        <div class="detalhe-section-title">📝 Motivo da Transferência</div>
+        <div class="detalhe-section-body">
+          <p style="font-size:0.855rem;color:var(--navy-mid);line-height:1.65;margin:0">${escapeHtmlDash(s.motivo_transferencia || '–')}</p>
+        </div>
+      </div>
+      <div class="detalhe-section" style="margin:0">
+        <div class="detalhe-section-title">⭐ Por que escolheu o Colégio Plenus</div>
+        <div class="detalhe-section-body">
+          <p style="font-size:0.855rem;color:var(--navy-mid);line-height:1.65;margin:0">${escapeHtmlDash(s.motivo_escolha_plenus || '–')}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Financeiro -->
+    <div style="display:flex;flex-direction:column;gap:0.875rem">
+      ${finHtml}
+      ${decisaoHtml}
+    </div>`;
+
+  document.getElementById('resp-detalhe-overlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function fecharDetalheResp() {
+  document.getElementById('resp-detalhe-overlay').classList.remove('active');
+  document.body.style.overflow = '';
 }
 
 // ============================================================
