@@ -1920,16 +1920,25 @@ async function registrarHistorico(interesseId, descricao, nomeAutor) {
 }
 
 function toggleVerMais(btn) {
-  const desc = btn.previousElementSibling;
-  const collapsed = desc.classList.toggle('h-collapsed');
-  btn.textContent = collapsed ? 'ver mais ▾' : 'ver menos ▴';
+  const desc = btn.parentElement.querySelector('.historico-desc');
+  if (!desc) return;
+  const collapsed = desc.style.overflow === 'hidden';
+  if (collapsed) {
+    desc.style.maxHeight = '';
+    desc.style.overflow  = '';
+    btn.textContent = 'ver menos ▴';
+  } else {
+    desc.style.maxHeight = '3.9em';
+    desc.style.overflow  = 'hidden';
+    btn.textContent = 'ver mais ▾';
+  }
 }
 
 function _histDescHtml(descricao) {
   const escaped = escapeHtml(descricao || '');
   const isLong  = (descricao || '').length > 120 || (descricao || '').includes('\n');
   if (!isLong) return `<div class="historico-desc">${escaped}</div>`;
-  return `<div class="historico-desc h-collapsed">${escaped}</div>`
+  return `<div class="historico-desc" style="max-height:3.9em;overflow:hidden">${escaped}</div>`
        + `<button class="ver-mais-btn" onclick="toggleVerMais(this)">ver mais ▾</button>`;
 }
 

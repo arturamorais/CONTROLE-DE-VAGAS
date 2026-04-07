@@ -343,9 +343,18 @@ function toggleChip(btn) {
 }
 
 function toggleVerMais(btn) {
-  const desc = btn.previousElementSibling;
-  const collapsed = desc.classList.toggle('h-collapsed');
-  btn.textContent = collapsed ? 'ver mais ▾' : 'ver menos ▴';
+  const desc = btn.parentElement.querySelector('.historico-desc');
+  if (!desc) return;
+  const collapsed = desc.style.overflow === 'hidden';
+  if (collapsed) {
+    desc.style.maxHeight = '';
+    desc.style.overflow  = '';
+    btn.textContent = 'ver menos ▴';
+  } else {
+    desc.style.maxHeight = '3.9em';
+    desc.style.overflow  = 'hidden';
+    btn.textContent = 'ver mais ▾';
+  }
 }
 
 function getChipsText(groupId) {
@@ -792,7 +801,7 @@ async function carregarSolicitacoes() {
             <div style="display:flex;gap:0.625rem;align-items:flex-start">
               <div style="width:28px;height:28px;border-radius:50%;background:${isColab ? '#fff7ed' : '#eff6ff'};border:2px solid ${isColab ? '#fed7aa' : '#bfdbfe'};display:flex;align-items:center;justify-content:center;font-size:0.7rem;flex-shrink:0;margin-top:1px">${isColab ? '🏫' : '👤'}</div>
               <div style="flex:1;min-width:0">
-                ${(() => { const d = escapeHtmlDash(h.descricao||''); const long = (h.descricao||'').length>120||(h.descricao||'').includes('\n'); return long ? `<div class="historico-desc h-collapsed" style="font-size:0.8rem;line-height:1.45">${d}</div><button class="ver-mais-btn" onclick="toggleVerMais(this)">ver mais ▾</button>` : `<div class="historico-desc" style="font-size:0.8rem;line-height:1.45">${d}</div>`; })()}
+                ${(() => { const d = escapeHtmlDash(h.descricao||''); const long = (h.descricao||'').length>120||(h.descricao||'').includes('\n'); return long ? `<div class="historico-desc" style="font-size:0.8rem;line-height:1.45;max-height:3.9em;overflow:hidden">${d}</div><button class="ver-mais-btn" onclick="toggleVerMais(this)">ver mais ▾</button>` : `<div class="historico-desc" style="font-size:0.8rem;line-height:1.45">${d}</div>`; })()}
                 <div style="font-size:0.7rem;color:var(--gray);margin-top:0.1rem">${new Date(h.created_at).toLocaleString('pt-BR')} · <span style="font-weight:600;color:${isColab ? '#ea580c' : '#2563eb'}">${isColab ? 'Equipe Plenus' : 'Você'}</span></div>
               </div>
             </div>`;
