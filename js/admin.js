@@ -1387,30 +1387,31 @@ async function imprimirFicha(id) {
       : null;
     const st  = a.status_aluno || 'pendente';
     const lbl = STATUS_ALUNO_LABEL[st] || st;
+    const extra = turmaInfo
+      ? ` · 🏫 ${turmaInfo}`
+      : (a.motivo_reprovacao ? ` · ✕ ${a.motivo_reprovacao}` : '');
     return `
-      <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 14px;border:1px solid #e2e8f0;border-left:4px solid ${ALUNO_BD[st]||'#e2e8f0'};border-radius:6px;background:white;margin-bottom:6px">
-        <div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#60a5fa);color:white;font-weight:800;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</div>
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 10px;border:1px solid #e2e8f0;border-left:3px solid ${ALUNO_BD[st]||'#e2e8f0'};border-radius:5px;background:white;margin-bottom:4px">
+        <div style="width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#60a5fa);color:white;font-weight:800;font-size:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</div>
         <div style="flex:1;min-width:0">
-          <div style="font-weight:700;font-size:13px;color:#0f172a">${a.nome_aluno}</div>
-          <div style="font-size:11px;color:#64748b;margin-top:2px">${SEGMENTO_LABEL[a.segmento] || a.segmento} · ${a.turma} · ${TURNO_LABEL[a.turno] || a.turno}</div>
-          ${turmaInfo ? `<div style="font-size:11px;color:#0e7490;margin-top:3px">🏫 Turma: ${turmaInfo}</div>` : ''}
-          ${a.motivo_reprovacao ? `<div style="font-size:11px;color:#b91c1c;margin-top:3px">Motivo de reprovação: ${a.motivo_reprovacao}</div>` : ''}
+          <div style="font-weight:700;font-size:10px;color:#0f172a">${a.nome_aluno}</div>
+          <div style="font-size:8.5px;color:#64748b;margin-top:1px">${SEGMENTO_LABEL[a.segmento] || a.segmento} · ${a.turma} · ${TURNO_LABEL[a.turno] || a.turno}${extra}</div>
         </div>
-        <span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:3px 9px;border-radius:20px;background:${ALUNO_BG[st]};color:${ALUNO_CL[st]};border:1px solid ${ALUNO_BD[st]};white-space:nowrap;flex-shrink:0">${lbl}</span>
+        <span style="font-size:7.5px;font-weight:800;text-transform:uppercase;padding:2px 7px;border-radius:20px;background:${ALUNO_BG[st]};color:${ALUNO_CL[st]};border:1px solid ${ALUNO_BD[st]};white-space:nowrap;flex-shrink:0">${lbl}</span>
       </div>`;
   }).join('');
 
   const histTimelineHtml = (hist || []).length ? (hist || []).map(h => {
     const isColab = h.autor_tipo === 'colaborador';
     return `
-      <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #f1f5f9">
-        <div style="width:28px;height:28px;border-radius:50%;background:${isColab ? '#fff7ed' : '#eff6ff'};border:2px solid ${isColab ? '#fed7aa' : '#bfdbfe'};display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0">${isColab ? '🏫' : '👤'}</div>
+      <div style="display:flex;gap:7px;align-items:flex-start;padding:4px 0;border-bottom:1px solid #f1f5f9">
+        <div style="width:20px;height:20px;border-radius:50%;background:${isColab ? '#fff7ed' : '#eff6ff'};border:1.5px solid ${isColab ? '#fed7aa' : '#bfdbfe'};display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0">${isColab ? '🏫' : '👤'}</div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:11px;font-weight:600;color:#0f172a;line-height:1.45">${h.descricao}</div>
-          <div style="font-size:10px;color:#94a3b8;margin-top:2px">${new Date(h.created_at).toLocaleString('pt-BR')} · <span style="font-weight:600;color:${isColab ? '#ea580c' : '#2563eb'}">${isColab ? 'Equipe Plenus' : (h.autor_nome || 'Responsável')}</span></div>
+          <div style="font-size:9px;font-weight:600;color:#0f172a;line-height:1.4">${h.descricao}</div>
+          <div style="font-size:8px;color:#94a3b8;margin-top:1px">${new Date(h.created_at).toLocaleString('pt-BR')} · <span style="font-weight:600;color:${isColab ? '#ea580c' : '#2563eb'}">${isColab ? 'Equipe Plenus' : (h.autor_nome || 'Responsável')}</span></div>
         </div>
       </div>`;
-  }).join('') : '<div style="color:#94a3b8;font-size:11px;padding:8px 0">Sem registros no histórico.</div>';
+  }).join('') : '<div style="color:#94a3b8;font-size:9px;padding:4px 0">Sem registros no histórico.</div>';
 
   const temDecisao = s.desconto_concedido || (s.permuta_aceita !== null && s.permuta_aceita !== undefined);
 
@@ -1422,59 +1423,61 @@ async function imprimirFicha(id) {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-      body { font-family: 'Inter', system-ui, sans-serif; font-size: 12px; color: #1e293b; background: #f8fafc; }
-      .page { max-width: 820px; margin: 0 auto; background: white; }
+      html, body { height: 100%; }
+      body { font-family: 'Inter', system-ui, sans-serif; font-size: 10px; color: #1e293b; background: white; }
+      .page { height: 100%; display: flex; flex-direction: column; }
 
       /* Header */
-      .doc-header { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; padding: 20px 28px 18px; display: flex; justify-content: space-between; align-items: flex-start; }
-      .doc-logo { display: flex; align-items: center; gap: 10px; }
-      .doc-logo-icon { width: 38px; height: 38px; background: rgba(59,130,246,.2); border: 1px solid rgba(59,130,246,.35); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
-      .doc-logo-text { font-size: 14px; font-weight: 800; line-height: 1.2; }
-      .doc-logo-sub  { font-size: 9px; color: #f97316; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; margin-top: 2px; }
+      .doc-header { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+      .doc-logo { display: flex; align-items: center; gap: 8px; }
+      .doc-logo-icon { width: 30px; height: 30px; background: rgba(59,130,246,.2); border: 1px solid rgba(59,130,246,.35); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+      .doc-logo-text { font-size: 12px; font-weight: 800; line-height: 1.2; }
+      .doc-logo-sub  { font-size: 7.5px; color: #f97316; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; margin-top: 1px; }
       .doc-meta { text-align: right; }
-      .doc-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: rgba(255,255,255,.6); }
-      .doc-gen   { font-size: 10px; color: rgba(255,255,255,.4); margin-top: 3px; }
+      .doc-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: rgba(255,255,255,.6); }
+      .doc-gen   { font-size: 8.5px; color: rgba(255,255,255,.4); margin-top: 2px; }
 
       /* Status strip */
-      .status-strip { background: ${STATUS_BG[s.status] || '#f8fafc'}; border-bottom: 2px solid ${STATUS_BD[s.status] || '#e2e8f0'}; padding: 10px 28px; display: flex; align-items: center; gap: 12px; }
-      .status-badge { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; background: ${STATUS_BG[s.status]}; color: ${STATUS_CL[s.status]}; border: 1px solid ${STATUS_BD[s.status]}; }
-      .status-dates { font-size: 10px; color: #64748b; }
+      .status-strip { background: ${STATUS_BG[s.status] || '#f8fafc'}; border-bottom: 2px solid ${STATUS_BD[s.status] || '#e2e8f0'}; padding: 5px 20px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+      .status-badge { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 20px; font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; background: ${STATUS_BG[s.status]}; color: ${STATUS_CL[s.status]}; border: 1px solid ${STATUS_BD[s.status]}; }
+      .status-dates { font-size: 8.5px; color: #64748b; }
 
-      /* Content */
-      .content { padding: 20px 28px; display: flex; flex-direction: column; gap: 18px; }
+      /* Two-column content */
+      .content { padding: 12px 20px 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; flex: 1; align-content: start; overflow: hidden; }
+      .col-span { grid-column: 1 / -1; }
 
       /* Section */
-      .sec-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #94a3b8; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+      .sec { margin-bottom: 10px; }
+      .sec-title { font-size: 7.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #94a3b8; margin-bottom: 5px; display: flex; align-items: center; gap: 5px; }
       .sec-title::after { content: ''; flex: 1; height: 1px; background: #e2e8f0; }
 
       /* Info grid */
-      .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
-      .info-cell { padding: 9px 14px; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; }
+      .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; }
+      .info-cell { padding: 5px 9px; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; }
       .info-cell:nth-child(even) { border-right: none; }
       .info-cell:nth-last-child(-n+2) { border-bottom: none; }
       .info-cell:last-child:nth-child(odd) { border-bottom: none; }
       .info-cell.full { grid-column: 1 / -1; border-right: none; }
-      .info-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #94a3b8; margin-bottom: 3px; }
-      .info-val { font-size: 12px; font-weight: 600; color: #0f172a; line-height: 1.45; }
+      .info-lbl { font-size: 7px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #94a3b8; margin-bottom: 2px; }
+      .info-val { font-size: 9.5px; font-weight: 600; color: #0f172a; line-height: 1.4; }
 
       /* Decisão da escola */
-      .decisao-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; overflow: hidden; }
-      .decisao-header { background: #dcfce7; padding: 7px 14px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #15803d; border-bottom: 1px solid #bbf7d0; }
+      .decisao-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; overflow: hidden; margin-top: 6px; }
+      .decisao-header { background: #dcfce7; padding: 4px 9px; font-size: 7.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #15803d; border-bottom: 1px solid #bbf7d0; }
       .decisao-grid { display: grid; grid-template-columns: 1fr 1fr; }
-      .decisao-cell { padding: 9px 14px; border-right: 1px solid #bbf7d0; }
+      .decisao-cell { padding: 5px 9px; border-right: 1px solid #bbf7d0; }
       .decisao-cell:last-child { border-right: none; }
 
       /* Ressalva */
-      .ressalva { background: #fef3c7; border: 1px solid #fde68a; border-left: 4px solid #f59e0b; padding: 8px 12px; font-size: 11px; color: #92400e; border-radius: 0 6px 6px 0; }
+      .ressalva { background: #fef3c7; border: 1px solid #fde68a; border-left: 3px solid #f59e0b; padding: 4px 10px; font-size: 8.5px; color: #92400e; border-radius: 0 5px 5px 0; }
 
       /* Footer */
-      .doc-footer { border-top: 1px solid #e2e8f0; padding: 12px 28px; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #94a3b8; }
+      .doc-footer { border-top: 1px solid #e2e8f0; padding: 5px 20px; display: flex; justify-content: space-between; align-items: center; font-size: 8px; color: #94a3b8; flex-shrink: 0; }
 
-      @page { size: landscape; margin: 12mm 14mm; }
+      @page { size: landscape; margin: 6mm 8mm; }
       @media print {
         body { background: white; }
-        .page { max-width: 100%; }
-        .doc-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .doc-header  { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         .status-strip { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         .decisao-box  { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       }
@@ -1505,62 +1508,60 @@ async function imprimirFicha(id) {
 
     <div class="content">
 
-      ${temRessalva ? `<div class="ressalva">⚠️ <strong>Aprovada com ressalvas:</strong> ${aprov} de ${totalAlunos} aluno${totalAlunos !== 1 ? 's' : ''} aprovado${aprov !== 1 ? 's' : ''}.</div>` : ''}
+      ${temRessalva ? `<div class="col-span"><div class="ressalva">⚠️ <strong>Aprovada com ressalvas:</strong> ${aprov} de ${totalAlunos} aluno${totalAlunos !== 1 ? 's' : ''} aprovado${aprov !== 1 ? 's' : ''}.</div></div>` : ''}
 
-      <!-- Responsável -->
+      <!-- Coluna esquerda: Responsável + Alunos -->
       <div>
-        <div class="sec-title">👤 Responsável</div>
-        <div class="info-grid">
-          <div class="info-cell"><div class="info-lbl">Nome</div><div class="info-val">${resp.nome || '–'}</div></div>
-          <div class="info-cell"><div class="info-lbl">Telefone</div><div class="info-val">${resp.telefone || '–'}</div></div>
-          <div class="info-cell full"><div class="info-lbl">E-mail</div><div class="info-val">${resp.email || '–'}</div></div>
+        <div class="sec">
+          <div class="sec-title">👤 Responsável</div>
+          <div class="info-grid">
+            <div class="info-cell"><div class="info-lbl">Nome</div><div class="info-val">${resp.nome || '–'}</div></div>
+            <div class="info-cell"><div class="info-lbl">Telefone</div><div class="info-val">${resp.telefone || '–'}</div></div>
+            <div class="info-cell full"><div class="info-lbl">E-mail</div><div class="info-val">${resp.email || '–'}</div></div>
+          </div>
+        </div>
+        <div class="sec">
+          <div class="sec-title">🎒 Alunos (${alunos.length})</div>
+          ${alunosCardHtml || '<div style="color:#94a3b8;font-size:9px">Nenhum aluno cadastrado.</div>'}
         </div>
       </div>
 
-      <!-- Alunos -->
+      <!-- Coluna direita: Motivos + Financeiro + Histórico -->
       <div>
-        <div class="sec-title">🎒 Alunos (${alunos.length})</div>
-        ${alunosCardHtml || '<div style="color:#94a3b8;font-size:11px">Nenhum aluno cadastrado.</div>'}
-      </div>
-
-      <!-- Motivos -->
-      <div>
-        <div class="sec-title">📝 Motivos</div>
-        <div class="info-grid">
-          <div class="info-cell full" style="border-bottom:1px solid #e2e8f0">
-            <div class="info-lbl">Motivo da Transferência</div>
-            <div class="info-val" style="font-weight:400;color:#334155;line-height:1.6">${s.motivo_transferencia || '–'}</div>
-          </div>
-          <div class="info-cell full">
-            <div class="info-lbl">Por que escolheu o Colégio Plenus</div>
-            <div class="info-val" style="font-weight:400;color:#334155;line-height:1.6">${s.motivo_escolha_plenus || '–'}</div>
+        <div class="sec">
+          <div class="sec-title">📝 Motivos</div>
+          <div class="info-grid">
+            <div class="info-cell full" style="border-bottom:1px solid #e2e8f0">
+              <div class="info-lbl">Motivo da Transferência</div>
+              <div class="info-val" style="font-weight:400;color:#334155;line-height:1.5">${s.motivo_transferencia || '–'}</div>
+            </div>
+            <div class="info-cell full">
+              <div class="info-lbl">Por que escolheu o Colégio Plenus</div>
+              <div class="info-val" style="font-weight:400;color:#334155;line-height:1.5">${s.motivo_escolha_plenus || '–'}</div>
+            </div>
           </div>
         </div>
-      </div>
-
-      <!-- Financeiro -->
-      <div>
-        <div class="sec-title">💰 Financeiro</div>
-        <div class="info-grid" style="margin-bottom:${temDecisao ? '10px' : '0'}">
-          <div class="info-cell"><div class="info-lbl">Mensalidade Atual</div><div class="info-val">${s.valor_mensalidade_anterior ? formatarMoedaExibicao(s.valor_mensalidade_anterior) : '–'}</div></div>
-          <div class="info-cell"><div class="info-lbl">Desconto Almejado</div><div class="info-val">${s.taxa_desconto_almejada ? s.taxa_desconto_almejada + '%' : '–'}</div></div>
-          <div class="info-cell"><div class="info-lbl">Possui Desconto Atual</div><div class="info-val">${s.tem_desconto ? 'Sim' : 'Não'}${s.tem_desconto && s.descricao_desconto ? ' — ' + s.descricao_desconto : ''}</div></div>
-          <div class="info-cell"><div class="info-lbl">Permuta Solicitada</div><div class="info-val">${PERMUTA_LABEL[s.tipo_permuta] || '–'}${s.tipo_permuta !== 'nao' && s.descricao_permuta ? ' — ' + s.descricao_permuta : ''}</div></div>
-        </div>
-        ${temDecisao ? `
-        <div class="decisao-box">
-          <div class="decisao-header">✅ Decisão da Escola</div>
-          <div class="decisao-grid">
-            <div class="decisao-cell"><div class="info-lbl">Desconto Concedido</div><div class="info-val" style="color:#15803d">${s.desconto_concedido || '–'}</div></div>
-            <div class="decisao-cell"><div class="info-lbl">Permuta</div><div class="info-val" style="color:${s.permuta_aceita ? '#15803d' : '#b91c1c'}">${s.permuta_aceita === true ? 'Aceita' : s.permuta_aceita === false ? 'Não aceita' : '–'}${s.permuta_aceita && s.condicoes_permuta_aceita ? ' — ' + s.condicoes_permuta_aceita : ''}</div></div>
+        <div class="sec">
+          <div class="sec-title">💰 Financeiro</div>
+          <div class="info-grid">
+            <div class="info-cell"><div class="info-lbl">Mensalidade Atual</div><div class="info-val">${s.valor_mensalidade_anterior ? formatarMoedaExibicao(s.valor_mensalidade_anterior) : '–'}</div></div>
+            <div class="info-cell"><div class="info-lbl">Desconto Almejado</div><div class="info-val">${s.taxa_desconto_almejada ? s.taxa_desconto_almejada + '%' : '–'}</div></div>
+            <div class="info-cell"><div class="info-lbl">Possui Desconto Atual</div><div class="info-val">${s.tem_desconto ? 'Sim' : 'Não'}${s.tem_desconto && s.descricao_desconto ? ' — ' + s.descricao_desconto : ''}</div></div>
+            <div class="info-cell"><div class="info-lbl">Permuta Solicitada</div><div class="info-val">${PERMUTA_LABEL[s.tipo_permuta] || '–'}${s.tipo_permuta !== 'nao' && s.descricao_permuta ? ' — ' + s.descricao_permuta : ''}</div></div>
           </div>
-        </div>` : ''}
-      </div>
-
-      <!-- Histórico -->
-      <div>
-        <div class="sec-title">🕐 Histórico (${(hist||[]).length})</div>
-        ${histTimelineHtml}
+          ${temDecisao ? `
+          <div class="decisao-box">
+            <div class="decisao-header">✅ Decisão da Escola</div>
+            <div class="decisao-grid">
+              <div class="decisao-cell"><div class="info-lbl">Desconto Concedido</div><div class="info-val" style="color:#15803d">${s.desconto_concedido || '–'}</div></div>
+              <div class="decisao-cell"><div class="info-lbl">Permuta</div><div class="info-val" style="color:${s.permuta_aceita ? '#15803d' : '#b91c1c'}">${s.permuta_aceita === true ? 'Aceita' : s.permuta_aceita === false ? 'Não aceita' : '–'}${s.permuta_aceita && s.condicoes_permuta_aceita ? ' — ' + s.condicoes_permuta_aceita : ''}</div></div>
+            </div>
+          </div>` : ''}
+        </div>
+        <div class="sec">
+          <div class="sec-title">🕐 Histórico (${(hist||[]).length})</div>
+          ${histTimelineHtml}
+        </div>
       </div>
 
     </div>
