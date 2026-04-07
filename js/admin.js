@@ -1452,10 +1452,11 @@ async function imprimirFicha(id) {
       .content { padding: 12px 20px 8px; display: flex; flex-direction: column; gap: 10px; flex: 1; overflow: hidden; }
 
       /* Two-column row */
-      .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; flex-shrink: 0; }
+      .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; flex: 1; min-height: 0; align-items: stretch; }
+      .col-left { display: flex; flex-direction: column; }
 
       /* Anotações */
-      .anotacoes-wrap { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+      .anotacoes-wrap { display: flex; flex-direction: column; flex: 1; min-height: 0; margin-top: 2px; }
       .anotacoes-area { flex: 1; border: 1.5px dashed #cbd5e1; border-radius: 6px; background: #fafafa; min-height: 0; }
 
       /* Section */
@@ -1524,8 +1525,8 @@ async function imprimirFicha(id) {
 
       <div class="cols">
 
-      <!-- Coluna esquerda: Responsável + Alunos -->
-      <div>
+      <!-- Coluna esquerda: Responsável + Alunos + Anotações -->
+      <div class="col-left">
         <div class="sec">
           <div class="sec-title">👤 Responsável</div>
           <div class="info-grid">
@@ -1537,6 +1538,10 @@ async function imprimirFicha(id) {
         <div class="sec">
           <div class="sec-title">🎒 Alunos (${alunos.length})</div>
           ${alunosCardHtml || '<div style="color:#94a3b8;font-size:9px">Nenhum aluno cadastrado.</div>'}
+        </div>
+        <div class="anotacoes-wrap">
+          <div class="sec-title">✏️ Anotações do atendimento</div>
+          <div class="anotacoes-area"></div>
         </div>
       </div>
 
@@ -1579,12 +1584,6 @@ async function imprimirFicha(id) {
       </div>
 
       </div><!-- /cols -->
-
-      <!-- Anotações -->
-      <div class="anotacoes-wrap">
-        <div class="sec-title">✏️ Anotações do atendimento</div>
-        <div class="anotacoes-area"></div>
-      </div>
 
     </div>
 
