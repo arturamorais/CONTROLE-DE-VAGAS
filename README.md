@@ -12,6 +12,7 @@ Sistema web completo para gerenciamento de solicitações de vagas escolares. Pe
 - Solicitação de vagas com dados dos alunos (segmento, série, turno)
 - Informações financeiras: mensalidade atual, desconto almejado, permuta
 - Acompanhamento de status em tempo real
+- Modal "Ver detalhes" por solicitação — resumo completo com alunos, motivos, dados financeiros e decisão da escola (desconto concedido e permuta)
 - Histórico de atualizações por solicitação
 - Edição de solicitações pendentes
 - Perfil com nome, telefone, alteração de e-mail e alteração de senha
@@ -24,10 +25,13 @@ Sistema web completo para gerenciamento de solicitações de vagas escolares. Pe
 - Avaliação individual de cada aluno dentro da solicitação
 - Matrícula individual por aluno quando há múltiplos alunos na solicitação
 - Indicação de enturmação no modal de detalhe de cada aluno
+- Decisão financeira por solicitação: desconto concedido e permuta (aceita/não aceita + condições)
 - Notas internas no histórico de cada solicitação
 - Guias de orientação contextuais por status
 - Enturmar: criação de turmas, alocação de alunos aprovados e visualização por turma
+- Ficha de Atendimento impressa — layout moderno em duas colunas (paisagem A4), com alunos, motivos, financeiro, histórico e quadro de anotações do atendimento
 - Relatório analítico com KPIs e gráficos (status, segmentos, séries, turnos, evolução mensal, enturmação, motivos)
+- Filtro de gráficos de motivos (saída e escolha do Plenus) por segmento e turma
 - Relatório rápido por turma com lista de alunos e impressão
 - Exportação de dados em CSV
 - Registro de atividade completo (logs com filtros)
@@ -140,7 +144,7 @@ Responsável cria solicitação
 | `turmas` | Turmas criadas pela equipe |
 | `anos_letivos` | Ano letivo ativo |
 | `alocacoes` | Vínculo aluno ↔ turma |
-| `historico_solicitacoes` | Timeline de cada solicitação |
+| `historico_solicitacoes` | Timeline de cada solicitação — cada alteração de status, decisão financeira, mudança de aluno e nota interna é registrada individualmente |
 | `logs` | Registro de todas as ações do sistema |
 
 ### Constraints de status
