@@ -727,6 +727,22 @@
       </div>
 
       <!-- Linha 6: Motivos saída + Motivos Plenus -->
+      <div class="card" style="padding:0.75rem 1.125rem;margin-bottom:1rem">
+        <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
+          <span style="font-size:0.78rem;font-weight:700;color:var(--gray-dark);white-space:nowrap">🔍 Filtrar motivos por:</span>
+          <select id="filtro-motivo-segmento" onchange="filtrarMotivos('segmento')" style="min-width:170px">
+            <option value="">Todos os segmentos</option>
+            <option value="educacao_infantil">Educação Infantil</option>
+            <option value="fundamental1">Fundamental 1</option>
+            <option value="fundamental2">Fundamental 2</option>
+            <option value="ensino_medio">Ensino Médio</option>
+          </select>
+          <select id="filtro-motivo-turma" onchange="filtrarMotivos('turma')" style="min-width:150px" disabled>
+            <option value="">Todas as turmas</option>
+          </select>
+          <span id="motivos-count" style="font-size:0.78rem;color:var(--gray);font-style:italic"></span>
+        </div>
+      </div>
       <div class="rel-row-2">
         <div class="card rel-chart-card">
           <div class="card-title">🚪 Motivos de Saída da Escola Anterior</div>

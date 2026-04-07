@@ -2689,6 +2689,112 @@ function _destroyChart(id) {
   if (_charts[id]) { _charts[id].destroy(); delete _charts[id]; }
 }
 
+// ---- Dados em cache para filtros de motivos ----
+let _relSolics = [];
+let _relAlunos = [];
+
+const CHIPS_SAIDA_REL  = ['Localização / Proximidade','Qualidade de Ensino','Proposta Pedagógica','Infraestrutura','Clima Escolar','Custo-Benefício','Indicação de Amigos/Família','Mudança de Endereço','Metodologia de Ensino'];
+const CHIPS_PLENUS_REL = ['Qualidade Pedagógica','Reputação da Escola','Indicação de Conhecidos','Infraestrutura','Projeto Pedagógico','Localização Favorável','Valores e Cultura da Escola','Atividades Extracurriculares','Clima Escolar'];
+const REL_PAL_BLUE  = ['#1e3a8a','#1e40af','#1d4ed8','#2563eb','#3b82f6','#60a5fa','#93c5fd','#bfdbfe','#dbeafe'];
+const REL_PAL_GREEN = ['#14532d','#166534','#15803d','#16a34a','#22c55e','#4ade80','#86efac','#bbf7d0'];
+
+function _contarMotivos(arr, campo, chipValues) {
+  const contagem = {};
+  arr.forEach(item => {
+    const texto = item[campo] || '';
+    let encontrou = false;
+    chipValues.forEach(chip => {
+      if (texto.includes(chip)) { contagem[chip] = (contagem[chip] || 0) + 1; encontrou = true; }
+    });
+    if (!encontrou && texto.trim()) contagem['Outros'] = (contagem['Outros'] || 0) + 1;
+  });
+  return contagem;
+}
+
+function renderMotivosCharts(filtroSeg, filtroTurma) {
+  if (!_relSolics.length) return;
+
+  // Filtra solicitações cujos alunos batem com segmento/turma
+  const solicFiltradas = _relSolics.filter(s => {
+    if (!filtroSeg && !filtroTurma) return true;
+    const alunosDaSolic = _relAlunos.filter(a => a.interesse_id === s.id);
+    if (!alunosDaSolic.length) return false;
+    return alunosDaSolic.some(a =>
+      (!filtroSeg   || a.segmento === filtroSeg) &&
+      (!filtroTurma || a.turma    === filtroTurma)
+    );
+  });
+
+  // Atualiza contagem
+  const countEl = document.getElementById('motivos-count');
+  if (countEl) {
+    countEl.textContent = (filtroSeg || filtroTurma)
+      ? `${solicFiltradas.length} solicitação${solicFiltradas.length !== 1 ? 'ões' : ''}`
+      : '';
+  }
+
+  // Chart: motivos de saída
+  _destroyChart('motivo-saida');
+  const saidaCount = _contarMotivos(solicFiltradas, 'motivo_transferencia', CHIPS_SAIDA_REL);
+  const saidaPares = Object.entries(saidaCount).sort((a, b) => b[1] - a[1]);
+  const canvasSaida = document.getElementById('chart-motivo-saida');
+  if (canvasSaida) {
+    _charts['motivo-saida'] = new Chart(canvasSaida, {
+      type: 'bar',
+      data: {
+        labels: saidaPares.map(([k]) => k),
+        datasets: [{ label: 'Menções', data: saidaPares.map(([, v]) => v), backgroundColor: REL_PAL_BLUE.slice(0, saidaPares.length), borderRadius: 5 }]
+      },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f1f5f9' } },
+          y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+        }
+      }
+    });
+  }
+
+  // Chart: motivos de escolha do Plenus
+  _destroyChart('motivo-plenus');
+  const plenusCont = _contarMotivos(solicFiltradas, 'motivo_escolha_plenus', CHIPS_PLENUS_REL);
+  const plenusPares = Object.entries(plenusCont).sort((a, b) => b[1] - a[1]);
+  const canvasPlenus = document.getElementById('chart-motivo-plenus');
+  if (canvasPlenus) {
+    _charts['motivo-plenus'] = new Chart(canvasPlenus, {
+      type: 'bar',
+      data: {
+        labels: plenusPares.map(([k]) => k),
+        datasets: [{ label: 'Menções', data: plenusPares.map(([, v]) => v), backgroundColor: REL_PAL_GREEN.slice(0, plenusPares.length), borderRadius: 5 }]
+      },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f1f5f9' } },
+          y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+        }
+      }
+    });
+  }
+}
+
+function filtrarMotivos(source) {
+  const seg = document.getElementById('filtro-motivo-segmento')?.value || '';
+  const turmaSelect = document.getElementById('filtro-motivo-turma');
+
+  if (source === 'segmento' && turmaSelect) {
+    const opts = seg ? (TURMAS[seg] || []) : [];
+    turmaSelect.innerHTML = '<option value="">Todas as turmas</option>' +
+      opts.map(t => `<option value="${t}">${t}</option>`).join('');
+    turmaSelect.disabled = !seg;
+  }
+
+  const turma = turmaSelect?.value || '';
+  renderMotivosCharts(seg, turma);
+}
+
 async function carregarRelatorios() {
   // 1. Busca dados
   const [{ data: solics }, { data: alunos }, { data: turmas }, { data: alocacoes }] = await Promise.all([
@@ -2699,6 +2805,10 @@ async function carregarRelatorios() {
   ]);
 
   if (!solics || !alunos) return;
+
+  // Persiste para filtros de motivos
+  _relSolics = solics;
+  _relAlunos = alunos;
 
   // ---- KPIs linha 1 ----
   const total          = solics.length; // todos os status, incluindo cancelados
@@ -2756,26 +2866,6 @@ async function carregarRelatorios() {
     }, {});
   }
 
-  function contarMotivos(arr, campo, chipValues) {
-    const contagem = {};
-    arr.forEach(item => {
-      const texto = item[campo] || '';
-      // Tenta bater com chips conhecidos
-      let encontrou = false;
-      chipValues.forEach(chip => {
-        if (texto.includes(chip)) {
-          contagem[chip] = (contagem[chip] || 0) + 1;
-          encontrou = true;
-        }
-      });
-      // Texto livre
-      if (!encontrou && texto.trim()) {
-        contagem['Outros'] = (contagem['Outros'] || 0) + 1;
-      }
-    });
-    return contagem;
-  }
-
   // ---- Paletas ----
   const CORES_STATUS = {
     pendente:    '#f59e0b',
@@ -2788,7 +2878,6 @@ async function carregarRelatorios() {
   const LABEL_STATUS = { pendente: 'Pendente', em_analise: 'Em Análise', aprovado: 'Aprovada', reprovado: 'Reprovada', cancelado: 'Cancelada', matriculado: 'Confirmada' };
 
   const PAL_BLUE   = ['#1e3a8a','#1e40af','#1d4ed8','#2563eb','#3b82f6','#60a5fa','#93c5fd','#bfdbfe','#dbeafe'];
-  const PAL_GREEN  = ['#14532d','#166534','#15803d','#16a34a','#22c55e','#4ade80','#86efac','#bbf7d0'];
   const PAL_ORANGE = ['#7c2d12','#9a3412','#c2410c','#ea580c','#f97316','#fb923c','#fdba74','#fed7aa'];
 
   // ---- 1. Status (donut) ----
@@ -2924,43 +3013,13 @@ async function carregarRelatorios() {
     });
   }
 
-  // ---- 7. Motivos de saída (bar horizontal) ----
-  _destroyChart('motivo-saida');
-  const CHIPS_SAIDA = ['Localização / Proximidade','Qualidade de Ensino','Proposta Pedagógica','Infraestrutura','Clima Escolar','Custo-Benefício','Indicação de Amigos/Família','Mudança de Endereço','Metodologia de Ensino'];
-  const saidaCount = contarMotivos(solics, 'motivo_transferencia', CHIPS_SAIDA);
-  const saidaPares = Object.entries(saidaCount).sort((a,b) => b[1]-a[1]);
-  _charts['motivo-saida'] = new Chart(document.getElementById('chart-motivo-saida'), {
-    type: 'bar',
-    data: {
-      labels: saidaPares.map(([k]) => k),
-      datasets: [{ label: 'Menções', data: saidaPares.map(([,v]) => v), backgroundColor: PAL_BLUE.slice(0, saidaPares.length), borderRadius: 5 }]
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: { x: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f1f5f9' } }, y: { grid: { display: false }, ticks: { font: { size: 11 } } } }
-    }
-  });
-
-  // ---- 8. Motivos escolha Plenus (bar horizontal) ----
-  _destroyChart('motivo-plenus');
-  const CHIPS_PLENUS = ['Qualidade Pedagógica','Reputação da Escola','Indicação de Conhecidos','Infraestrutura','Projeto Pedagógico','Localização Favorável','Valores e Cultura da Escola','Atividades Extracurriculares','Clima Escolar'];
-  const plenusCont = contarMotivos(solics, 'motivo_escolha_plenus', CHIPS_PLENUS);
-  const plenusPares = Object.entries(plenusCont).sort((a,b) => b[1]-a[1]);
-  _charts['motivo-plenus'] = new Chart(document.getElementById('chart-motivo-plenus'), {
-    type: 'bar',
-    data: {
-      labels: plenusPares.map(([k]) => k),
-      datasets: [{ label: 'Menções', data: plenusPares.map(([,v]) => v), backgroundColor: PAL_GREEN.slice(0, plenusPares.length), borderRadius: 5 }]
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: { x: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f1f5f9' } }, y: { grid: { display: false }, ticks: { font: { size: 11 } } } }
-    }
-  });
+  // ---- 7 & 8. Motivos de saída + Motivos de escolha Plenus ----
+  // Resetar filtros e renderizar
+  const filtroSegEl   = document.getElementById('filtro-motivo-segmento');
+  const filtroTurmaEl = document.getElementById('filtro-motivo-turma');
+  if (filtroSegEl)   filtroSegEl.value = '';
+  if (filtroTurmaEl) { filtroTurmaEl.innerHTML = '<option value="">Todas as turmas</option>'; filtroTurmaEl.disabled = true; }
+  renderMotivosCharts('', '');
 }
 
 // ============================================================
