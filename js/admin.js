@@ -1373,119 +1373,204 @@ async function imprimirFicha(id) {
     .eq('interesse_id', id)
     .order('created_at', { ascending: true });
 
-  const alunosHtml = alunos.map((a, i) => {
+  const STATUS_BG = { pendente:'#fef3c7', em_analise:'#eff6ff', aprovado:'#dcfce7', reprovado:'#fee2e2', cancelado:'#f5f3ff', matriculado:'#ecfeff' };
+  const STATUS_CL = { pendente:'#92400e', em_analise:'#1e40af', aprovado:'#15803d', reprovado:'#b91c1c', cancelado:'#7c3aed', matriculado:'#0e7490' };
+  const STATUS_BD = { pendente:'#fde68a', em_analise:'#bfdbfe', aprovado:'#bbf7d0', reprovado:'#fecaca', cancelado:'#ddd6fe', matriculado:'#a5f3fc' };
+  const ALUNO_CL  = { pendente:'#92400e', aprovado:'#15803d', reprovado:'#b91c1c', matriculado:'#0e7490' };
+  const ALUNO_BG  = { pendente:'#fef3c7', aprovado:'#dcfce7', reprovado:'#fee2e2', matriculado:'#ecfeff' };
+  const ALUNO_BD  = { pendente:'#fde68a', aprovado:'#bbf7d0', reprovado:'#fecaca', matriculado:'#a5f3fc' };
+
+  const alunosCardHtml = alunos.map((a, i) => {
     const alocacao  = a.alocacoes?.[0];
     const turmaInfo = alocacao?.turmas
-      ? `${alocacao.turmas.serie} – ${alocacao.turmas.nome_turma} (${alocacao.turmas.turno})`
-      : '–';
+      ? `${alocacao.turmas.serie} – ${alocacao.turmas.nome_turma} (${TURNO_LABEL_FULL[alocacao.turmas.turno] || alocacao.turmas.turno})`
+      : null;
+    const st  = a.status_aluno || 'pendente';
+    const lbl = STATUS_ALUNO_LABEL[st] || st;
     return `
-      <tr>
-        <td>${i+1}</td>
-        <td>${a.nome_aluno}</td>
-        <td>${SEGMENTO_LABEL[a.segmento] || a.segmento}</td>
-        <td>${a.turma}</td>
-        <td>${TURNO_LABEL[a.turno] || a.turno}</td>
-        <td>${STATUS_ALUNO_LABEL[a.status_aluno] || a.status_aluno || 'Pendente'}</td>
-        <td>${turmaInfo}</td>
-      </tr>`;
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 14px;border:1px solid #e2e8f0;border-left:4px solid ${ALUNO_BD[st]||'#e2e8f0'};border-radius:6px;background:white;margin-bottom:6px">
+        <div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#60a5fa);color:white;font-weight:800;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:13px;color:#0f172a">${a.nome_aluno}</div>
+          <div style="font-size:11px;color:#64748b;margin-top:2px">${SEGMENTO_LABEL[a.segmento] || a.segmento} · ${a.turma} · ${TURNO_LABEL[a.turno] || a.turno}</div>
+          ${turmaInfo ? `<div style="font-size:11px;color:#0e7490;margin-top:3px">🏫 Turma: ${turmaInfo}</div>` : ''}
+          ${a.motivo_reprovacao ? `<div style="font-size:11px;color:#b91c1c;margin-top:3px">Motivo de reprovação: ${a.motivo_reprovacao}</div>` : ''}
+        </div>
+        <span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:3px 9px;border-radius:20px;background:${ALUNO_BG[st]};color:${ALUNO_CL[st]};border:1px solid ${ALUNO_BD[st]};white-space:nowrap;flex-shrink:0">${lbl}</span>
+      </div>`;
   }).join('');
 
-  const histHtml = (hist || []).map(h => `
-    <tr>
-      <td>${new Date(h.created_at).toLocaleString('pt-BR')}</td>
-      <td>${h.autor_tipo === 'colaborador' ? 'Equipe Plenus' : 'Responsável'}</td>
-      <td>${h.descricao}</td>
-    </tr>`).join('');
+  const histTimelineHtml = (hist || []).length ? (hist || []).map(h => {
+    const isColab = h.autor_tipo === 'colaborador';
+    return `
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #f1f5f9">
+        <div style="width:28px;height:28px;border-radius:50%;background:${isColab ? '#fff7ed' : '#eff6ff'};border:2px solid ${isColab ? '#fed7aa' : '#bfdbfe'};display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0">${isColab ? '🏫' : '👤'}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;font-weight:600;color:#0f172a;line-height:1.45">${h.descricao}</div>
+          <div style="font-size:10px;color:#94a3b8;margin-top:2px">${new Date(h.created_at).toLocaleString('pt-BR')} · <span style="font-weight:600;color:${isColab ? '#ea580c' : '#2563eb'}">${isColab ? 'Equipe Plenus' : (h.autor_nome || 'Responsável')}</span></div>
+        </div>
+      </div>`;
+  }).join('') : '<div style="color:#94a3b8;font-size:11px;padding:8px 0">Sem registros no histórico.</div>';
+
+  const temDecisao = s.desconto_concedido || (s.permuta_aceita !== null && s.permuta_aceita !== undefined);
 
   const win = window.open('', '_blank');
   win.document.write(`<!DOCTYPE html><html lang="pt-br"><head>
     <meta charset="UTF-8">
     <title>Ficha de Atendimento – ${resp.nome || ''}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-      * { box-sizing: border-box; margin: 0; padding: 0; }
-      body { font-family: Arial, sans-serif; font-size: 12px; color: #1e293b; padding: 24px; }
-      h1 { font-size: 18px; color: #0f172a; margin-bottom: 4px; }
-      .sub { font-size: 11px; color: #64748b; margin-bottom: 20px; }
-      .badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; margin-left:8px; }
-      .badge.pendente { background:#fef3c7; color:#92400e; border-color:#fde68a; }
-      .badge.em_analise { background:#eff6ff; color:#1e40af; border-color:#bfdbfe; }
-      .badge.reprovado { background:#fef2f2; color:#b91c1c; border-color:#fecaca; }
-      .badge.cancelado { background:#f5f3ff; color:#7c3aed; border-color:#ddd6fe; }
-      .badge.matriculado { background:#ecfeff; color:#0e7490; border-color:#a5f3fc; }
-      section { margin-bottom: 18px; }
-      h2 { font-size: 13px; font-weight: 700; color: #0f172a; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: .04em; }
-      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; }
-      .field label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: .04em; display: block; }
-      .field span { font-size: 12px; color: #1e293b; font-weight: 600; }
-      table { width: 100%; border-collapse: collapse; font-size: 11px; }
-      th { background: #f8fafc; text-align: left; padding: 5px 8px; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: #64748b; border: 1px solid #e2e8f0; }
-      td { padding: 5px 8px; border: 1px solid #e2e8f0; vertical-align: top; }
-      tr:nth-child(even) td { background: #f8fafc; }
-      .ressalva { background:#fef3c7; border:1px solid #fde68a; border-left:3px solid #f59e0b; padding:6px 10px; font-size:11px; color:#92400e; margin-bottom:10px; border-radius:0 4px 4px 0; }
-      .decisao { background:#f0fdf4; border:1px solid #bbf7d0; padding:8px 12px; border-radius:6px; }
-      .footer { margin-top:24px; border-top:1px solid #e2e8f0; padding-top:10px; font-size:10px; color:#94a3b8; text-align:center; }
-      @media print { body { padding: 12px; } }
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: 'Inter', system-ui, sans-serif; font-size: 12px; color: #1e293b; background: #f8fafc; }
+      .page { max-width: 820px; margin: 0 auto; background: white; }
+
+      /* Header */
+      .doc-header { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; padding: 20px 28px 18px; display: flex; justify-content: space-between; align-items: flex-start; }
+      .doc-logo { display: flex; align-items: center; gap: 10px; }
+      .doc-logo-icon { width: 38px; height: 38px; background: rgba(59,130,246,.2); border: 1px solid rgba(59,130,246,.35); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+      .doc-logo-text { font-size: 14px; font-weight: 800; line-height: 1.2; }
+      .doc-logo-sub  { font-size: 9px; color: #f97316; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; margin-top: 2px; }
+      .doc-meta { text-align: right; }
+      .doc-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: rgba(255,255,255,.6); }
+      .doc-gen   { font-size: 10px; color: rgba(255,255,255,.4); margin-top: 3px; }
+
+      /* Status strip */
+      .status-strip { background: ${STATUS_BG[s.status] || '#f8fafc'}; border-bottom: 2px solid ${STATUS_BD[s.status] || '#e2e8f0'}; padding: 10px 28px; display: flex; align-items: center; gap: 12px; }
+      .status-badge { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; background: ${STATUS_BG[s.status]}; color: ${STATUS_CL[s.status]}; border: 1px solid ${STATUS_BD[s.status]}; }
+      .status-dates { font-size: 10px; color: #64748b; }
+
+      /* Content */
+      .content { padding: 20px 28px; display: flex; flex-direction: column; gap: 18px; }
+
+      /* Section */
+      .sec-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #94a3b8; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+      .sec-title::after { content: ''; flex: 1; height: 1px; background: #e2e8f0; }
+
+      /* Info grid */
+      .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+      .info-cell { padding: 9px 14px; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; }
+      .info-cell:nth-child(even) { border-right: none; }
+      .info-cell:nth-last-child(-n+2) { border-bottom: none; }
+      .info-cell:last-child:nth-child(odd) { border-bottom: none; }
+      .info-cell.full { grid-column: 1 / -1; border-right: none; }
+      .info-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #94a3b8; margin-bottom: 3px; }
+      .info-val { font-size: 12px; font-weight: 600; color: #0f172a; line-height: 1.45; }
+
+      /* Decisão da escola */
+      .decisao-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; overflow: hidden; }
+      .decisao-header { background: #dcfce7; padding: 7px 14px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #15803d; border-bottom: 1px solid #bbf7d0; }
+      .decisao-grid { display: grid; grid-template-columns: 1fr 1fr; }
+      .decisao-cell { padding: 9px 14px; border-right: 1px solid #bbf7d0; }
+      .decisao-cell:last-child { border-right: none; }
+
+      /* Ressalva */
+      .ressalva { background: #fef3c7; border: 1px solid #fde68a; border-left: 4px solid #f59e0b; padding: 8px 12px; font-size: 11px; color: #92400e; border-radius: 0 6px 6px 0; }
+
+      /* Footer */
+      .doc-footer { border-top: 1px solid #e2e8f0; padding: 12px 28px; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #94a3b8; }
+
+      @media print {
+        body { background: white; }
+        .page { max-width: 100%; }
+        .doc-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .status-strip { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .decisao-box  { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      }
     </style>
   </head><body>
-    <h1>Ficha de Atendimento <span class="badge ${s.status}">${badgeLabel}</span></h1>
-    <div class="sub">Colégio Plenus · Gerada em ${new Date().toLocaleString('pt-BR')}</div>
+  <div class="page">
 
-    <section>
-      <h2>Responsável</h2>
-      <div class="grid">
-        <div class="field"><label>Nome</label><span>${resp.nome || '–'}</span></div>
-        <div class="field"><label>E-mail</label><span>${resp.email || '–'}</span></div>
-        <div class="field"><label>Telefone</label><span>${resp.telefone || '–'}</span></div>
-        <div class="field"><label>Data da solicitação</label><span>${dataFmt}</span></div>
-        <div class="field"><label>Última atualização</label><span>${updFmt}</span></div>
-      </div>
-    </section>
-
-    <section>
-      <h2>Alunos</h2>
-      ${temRessalva ? `<div class="ressalva">⚠️ Aprovada com ressalvas: ${aprov} de ${totalAlunos} aluno(s) aprovado(s).</div>` : ''}
-      <table>
-        <thead><tr><th>#</th><th>Nome</th><th>Segmento</th><th>Série</th><th>Turno</th><th>Status</th><th>Turma</th></tr></thead>
-        <tbody>${alunosHtml}</tbody>
-      </table>
-    </section>
-
-    <section>
-      <h2>Motivos</h2>
-      <div class="grid">
-        <div class="field"><label>Motivo da Transferência</label><span>${s.motivo_transferencia || '–'}</span></div>
-        <div class="field"><label>Por que escolheu o Colégio Plenus</label><span>${s.motivo_escolha_plenus || '–'}</span></div>
-      </div>
-    </section>
-
-    <section>
-      <h2>Financeiro</h2>
-      <div class="grid">
-        <div class="field"><label>Mensalidade Atual</label><span>${s.valor_mensalidade_anterior ? formatarMoedaExibicao(s.valor_mensalidade_anterior) : '–'}</span></div>
-        <div class="field"><label>Desconto Almejado</label><span>${s.taxa_desconto_almejada ? s.taxa_desconto_almejada + '%' : '–'}</span></div>
-        <div class="field"><label>Tem Desconto Atual</label><span>${s.tem_desconto ? 'Sim' : 'Não'}${s.tem_desconto && s.descricao_desconto ? ' — ' + s.descricao_desconto : ''}</span></div>
-        <div class="field"><label>Permuta Solicitada</label><span>${PERMUTA_LABEL[s.tipo_permuta] || '–'}${s.tipo_permuta !== 'nao' && s.descricao_permuta ? ' — ' + s.descricao_permuta : ''}</span></div>
-      </div>
-      ${(s.desconto_concedido || s.permuta_aceita !== null && s.permuta_aceita !== undefined) ? `
-      <div class="decisao" style="margin-top:10px">
-        <strong style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#15803d">Decisão da Escola</strong>
-        <div class="grid" style="margin-top:6px">
-          <div class="field"><label>Desconto Concedido</label><span>${s.desconto_concedido || '–'}</span></div>
-          <div class="field"><label>Permuta</label><span>${s.permuta_aceita === true ? 'Aceita' : s.permuta_aceita === false ? 'Não aceita' : '–'}${s.permuta_aceita && s.condicoes_permuta_aceita ? ' — ' + s.condicoes_permuta_aceita : ''}</span></div>
+    <!-- Cabeçalho -->
+    <div class="doc-header">
+      <div class="doc-logo">
+        <div class="doc-logo-icon">🏫</div>
+        <div>
+          <div class="doc-logo-text">Colégio Plenus</div>
+          <div class="doc-logo-sub">Sistema de Vagas</div>
         </div>
-      </div>` : ''}
-    </section>
+      </div>
+      <div class="doc-meta">
+        <div class="doc-title">Ficha de Atendimento</div>
+        <div class="doc-gen">Gerada em ${new Date().toLocaleString('pt-BR')}</div>
+      </div>
+    </div>
 
-    <section>
-      <h2>Histórico (${(hist||[]).length} entradas)</h2>
-      <table>
-        <thead><tr><th>Data/Hora</th><th>Por</th><th>Descrição</th></tr></thead>
-        <tbody>${histHtml || '<tr><td colspan="3" style="color:#94a3b8;text-align:center">Sem registros</td></tr>'}</tbody>
-      </table>
-    </section>
+    <!-- Faixa de status -->
+    <div class="status-strip">
+      <span class="status-badge">${badgeLabel}</span>
+      <span class="status-dates">Solicitado em ${dataFmt} · Atualizado em ${updFmt}</span>
+    </div>
 
-    <div class="footer">Documento gerado automaticamente pelo sistema de gestão de vagas · Colégio Plenus</div>
-    <script>window.onload = () => { window.print(); }</script>
+    <div class="content">
+
+      ${temRessalva ? `<div class="ressalva">⚠️ <strong>Aprovada com ressalvas:</strong> ${aprov} de ${totalAlunos} aluno${totalAlunos !== 1 ? 's' : ''} aprovado${aprov !== 1 ? 's' : ''}.</div>` : ''}
+
+      <!-- Responsável -->
+      <div>
+        <div class="sec-title">👤 Responsável</div>
+        <div class="info-grid">
+          <div class="info-cell"><div class="info-lbl">Nome</div><div class="info-val">${resp.nome || '–'}</div></div>
+          <div class="info-cell"><div class="info-lbl">Telefone</div><div class="info-val">${resp.telefone || '–'}</div></div>
+          <div class="info-cell full"><div class="info-lbl">E-mail</div><div class="info-val">${resp.email || '–'}</div></div>
+        </div>
+      </div>
+
+      <!-- Alunos -->
+      <div>
+        <div class="sec-title">🎒 Alunos (${alunos.length})</div>
+        ${alunosCardHtml || '<div style="color:#94a3b8;font-size:11px">Nenhum aluno cadastrado.</div>'}
+      </div>
+
+      <!-- Motivos -->
+      <div>
+        <div class="sec-title">📝 Motivos</div>
+        <div class="info-grid">
+          <div class="info-cell full" style="border-bottom:1px solid #e2e8f0">
+            <div class="info-lbl">Motivo da Transferência</div>
+            <div class="info-val" style="font-weight:400;color:#334155;line-height:1.6">${s.motivo_transferencia || '–'}</div>
+          </div>
+          <div class="info-cell full">
+            <div class="info-lbl">Por que escolheu o Colégio Plenus</div>
+            <div class="info-val" style="font-weight:400;color:#334155;line-height:1.6">${s.motivo_escolha_plenus || '–'}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Financeiro -->
+      <div>
+        <div class="sec-title">💰 Financeiro</div>
+        <div class="info-grid" style="margin-bottom:${temDecisao ? '10px' : '0'}">
+          <div class="info-cell"><div class="info-lbl">Mensalidade Atual</div><div class="info-val">${s.valor_mensalidade_anterior ? formatarMoedaExibicao(s.valor_mensalidade_anterior) : '–'}</div></div>
+          <div class="info-cell"><div class="info-lbl">Desconto Almejado</div><div class="info-val">${s.taxa_desconto_almejada ? s.taxa_desconto_almejada + '%' : '–'}</div></div>
+          <div class="info-cell"><div class="info-lbl">Possui Desconto Atual</div><div class="info-val">${s.tem_desconto ? 'Sim' : 'Não'}${s.tem_desconto && s.descricao_desconto ? ' — ' + s.descricao_desconto : ''}</div></div>
+          <div class="info-cell"><div class="info-lbl">Permuta Solicitada</div><div class="info-val">${PERMUTA_LABEL[s.tipo_permuta] || '–'}${s.tipo_permuta !== 'nao' && s.descricao_permuta ? ' — ' + s.descricao_permuta : ''}</div></div>
+        </div>
+        ${temDecisao ? `
+        <div class="decisao-box">
+          <div class="decisao-header">✅ Decisão da Escola</div>
+          <div class="decisao-grid">
+            <div class="decisao-cell"><div class="info-lbl">Desconto Concedido</div><div class="info-val" style="color:#15803d">${s.desconto_concedido || '–'}</div></div>
+            <div class="decisao-cell"><div class="info-lbl">Permuta</div><div class="info-val" style="color:${s.permuta_aceita ? '#15803d' : '#b91c1c'}">${s.permuta_aceita === true ? 'Aceita' : s.permuta_aceita === false ? 'Não aceita' : '–'}${s.permuta_aceita && s.condicoes_permuta_aceita ? ' — ' + s.condicoes_permuta_aceita : ''}</div></div>
+          </div>
+        </div>` : ''}
+      </div>
+
+      <!-- Histórico -->
+      <div>
+        <div class="sec-title">🕐 Histórico (${(hist||[]).length})</div>
+        ${histTimelineHtml}
+      </div>
+
+    </div>
+
+    <div class="doc-footer">
+      <span>Colégio Plenus · Sistema de Gestão de Vagas</span>
+      <span>Documento gerado automaticamente</span>
+    </div>
+
+  </div>
+  <script>window.onload = () => { window.print(); }</script>
   </body></html>`);
   win.document.close();
 }
