@@ -1011,6 +1011,9 @@ function renderSolicitacoes(lista) {
           </div>
           <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
             ${guiaBtn}
+            <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); imprimirFicha('${s.id}')">
+              🖨️ Ficha
+            </button>
             <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); abrirDetalhe('${s.id}')">
               Ver Detalhes →
             </button>
@@ -1137,32 +1140,65 @@ function abrirDetalhe(id) {
       </div>
 
       <!-- ABA: Financeiro -->
-      <div id="aba-financeiro" class="detalhe-aba" style="padding:1.25rem;display:none;flex-direction:column;gap:1rem">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
-          <div class="detalhe-section" style="margin:0">
-            <div class="detalhe-section-title">Mensalidade Atual</div>
-            <div class="detalhe-section-body">
-              <span style="font-size:1.1rem;font-weight:700;color:var(--navy-mid)">${s.valor_mensalidade_anterior ? formatarMoedaExibicao(s.valor_mensalidade_anterior) : '–'}</span>
+      <div id="aba-financeiro" class="detalhe-aba" style="padding:1.25rem;display:none;flex-direction:column;gap:1.25rem">
+
+        <!-- Informações do responsável (somente leitura) -->
+        <div>
+          <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--gray);margin-bottom:0.75rem">Informado pelo responsável</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
+            <div class="detalhe-section" style="margin:0">
+              <div class="detalhe-section-title">Mensalidade Atual</div>
+              <div class="detalhe-section-body">
+                <span style="font-size:1.1rem;font-weight:700;color:var(--navy-mid)">${s.valor_mensalidade_anterior ? formatarMoedaExibicao(s.valor_mensalidade_anterior) : '–'}</span>
+              </div>
+            </div>
+            <div class="detalhe-section" style="margin:0">
+              <div class="detalhe-section-title">Desconto Almejado</div>
+              <div class="detalhe-section-body">
+                <span style="font-size:1.1rem;font-weight:700;color:var(--navy-mid)">${s.taxa_desconto_almejada ? s.taxa_desconto_almejada + '%' : '–'}</span>
+              </div>
+            </div>
+            <div class="detalhe-section" style="margin:0">
+              <div class="detalhe-section-title">Desconto Atual</div>
+              <div class="detalhe-section-body">
+                <span style="font-size:0.875rem;font-weight:600;color:var(--navy-mid)">${s.tem_desconto ? 'Sim' : 'Não'}</span>
+                ${s.tem_desconto && s.descricao_desconto ? `<p style="font-size:0.82rem;color:var(--gray-dark);margin:0.25rem 0 0">${escapeHtml(s.descricao_desconto)}</p>` : ''}
+              </div>
+            </div>
+            <div class="detalhe-section" style="margin:0">
+              <div class="detalhe-section-title">Permuta Solicitada</div>
+              <div class="detalhe-section-body">
+                <span style="font-size:0.875rem;font-weight:600;color:var(--navy-mid)">${PERMUTA_LABEL[s.tipo_permuta] || '–'}</span>
+                ${s.tipo_permuta !== 'nao' && s.descricao_permuta ? `<p style="font-size:0.82rem;color:var(--gray-dark);margin:0.25rem 0 0">${escapeHtml(s.descricao_permuta)}</p>` : ''}
+              </div>
             </div>
           </div>
-          <div class="detalhe-section" style="margin:0">
-            <div class="detalhe-section-title">Desconto Almejado</div>
-            <div class="detalhe-section-body">
-              <span style="font-size:1.1rem;font-weight:700;color:var(--navy-mid)">${s.taxa_desconto_almejada ? s.taxa_desconto_almejada + '%' : '–'}</span>
+        </div>
+
+        <!-- Decisão da escola (editável por colaboradores) -->
+        <div>
+          <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--gray);margin-bottom:0.75rem">Decisão da escola</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
+            <div class="detalhe-section" style="margin:0">
+              <div class="detalhe-section-title" style="justify-content:space-between">
+                Desconto Concedido
+                <button class="btn btn-secondary btn-sm" style="font-size:0.68rem;padding:0.2rem 0.5rem" onclick="editarFinanceiro('${id}','desconto')">✏️ Editar</button>
+              </div>
+              <div class="detalhe-section-body" id="fin-desconto-display">
+                ${s.desconto_concedido ? `<span style="font-size:0.95rem;font-weight:700;color:#15803d">${escapeHtml(s.desconto_concedido)}</span>` : '<span style="color:var(--gray);font-size:0.85rem">Não informado</span>'}
+              </div>
             </div>
-          </div>
-          <div class="detalhe-section" style="margin:0">
-            <div class="detalhe-section-title">Desconto Atual</div>
-            <div class="detalhe-section-body">
-              <span style="font-size:0.875rem;font-weight:600;color:var(--navy-mid)">${s.tem_desconto ? 'Sim' : 'Não'}</span>
-              ${s.tem_desconto && s.descricao_desconto ? `<p style="font-size:0.82rem;color:var(--gray-dark);margin:0.25rem 0 0">${escapeHtml(s.descricao_desconto)}</p>` : ''}
-            </div>
-          </div>
-          <div class="detalhe-section" style="margin:0">
-            <div class="detalhe-section-title">Permuta</div>
-            <div class="detalhe-section-body">
-              <span style="font-size:0.875rem;font-weight:600;color:var(--navy-mid)">${PERMUTA_LABEL[s.tipo_permuta] || '–'}</span>
-              ${s.tipo_permuta !== 'nao' && s.descricao_permuta ? `<p style="font-size:0.82rem;color:var(--gray-dark);margin:0.25rem 0 0">${escapeHtml(s.descricao_permuta)}</p>` : ''}
+            <div class="detalhe-section" style="margin:0">
+              <div class="detalhe-section-title" style="justify-content:space-between">
+                Permuta
+                <button class="btn btn-secondary btn-sm" style="font-size:0.68rem;padding:0.2rem 0.5rem" onclick="editarFinanceiro('${id}','permuta')">✏️ Editar</button>
+              </div>
+              <div class="detalhe-section-body" id="fin-permuta-display">
+                ${s.permuta_aceita !== null && s.permuta_aceita !== undefined
+                  ? `<span style="font-size:0.875rem;font-weight:700;color:${s.permuta_aceita ? '#15803d' : '#dc2626'}">${s.permuta_aceita ? '✅ Aceita' : '❌ Não aceita'}</span>`
+                  : '<span style="color:var(--gray);font-size:0.85rem">Não informado</span>'}
+                ${s.permuta_aceita && s.condicoes_permuta_aceita ? `<p style="font-size:0.82rem;color:var(--gray-dark);margin:0.25rem 0 0">${escapeHtml(s.condicoes_permuta_aceita)}</p>` : ''}
+              </div>
             </div>
           </div>
         </div>
@@ -1200,6 +1236,216 @@ function trocarAbaDetalhe(aba, btn) {
   document.querySelectorAll('.detalhe-tab').forEach(el => el.classList.remove('active'));
   document.getElementById('aba-' + aba).style.display = 'flex';
   btn.classList.add('active');
+}
+
+async function editarFinanceiro(id, campo) {
+  const s = todasSolicitacoes.find(x => x.id === id);
+  if (!s) return;
+
+  let result;
+  if (campo === 'desconto') {
+    result = await Swal.fire({
+      title: '💰 Desconto Concedido',
+      html: `<p style="font-size:0.85rem;color:#475569;margin-bottom:0.75rem">Informe o desconto concedido ao responsável (ex: 20%, R$ 150,00, etc.)</p>
+             <input id="swal-desconto" class="swal2-input" placeholder="Ex: 15% ou R$ 200,00" value="${escapeHtml(s.desconto_concedido || '')}">`,
+      showCancelButton: true,
+      confirmButtonText: '💾 Salvar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#f97316',
+      preConfirm: () => document.getElementById('swal-desconto').value.trim()
+    });
+    if (!result.isConfirmed) return;
+    const val = result.value;
+    const { error } = await cliente.from('interesse_vagas').update({ desconto_concedido: val || null }).eq('id', id);
+    if (error) { showToast('❌ Erro: ' + error.message); return; }
+    s.desconto_concedido = val || null;
+    document.getElementById('fin-desconto-display').innerHTML = val
+      ? `<span style="font-size:0.95rem;font-weight:700;color:#15803d">${escapeHtml(val)}</span>`
+      : '<span style="color:var(--gray);font-size:0.85rem">Não informado</span>';
+    await registrarLog('editar_financeiro', 'interesse_vagas', id, `Desconto concedido: ${val || 'removido'}`);
+    showToast('✅ Desconto atualizado!');
+
+  } else {
+    result = await Swal.fire({
+      title: '🔄 Permuta',
+      html: `<p style="font-size:0.85rem;color:#475569;margin-bottom:0.75rem">A permuta foi aceita?</p>
+             <div style="display:flex;gap:0.75rem;justify-content:center;margin-bottom:1rem">
+               <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.875rem;cursor:pointer">
+                 <input type="radio" name="permuta-r" value="sim" ${s.permuta_aceita === true ? 'checked' : ''}> Sim, aceita
+               </label>
+               <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.875rem;cursor:pointer">
+                 <input type="radio" name="permuta-r" value="nao" ${s.permuta_aceita === false ? 'checked' : ''}> Não aceita
+               </label>
+               <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.875rem;cursor:pointer">
+                 <input type="radio" name="permuta-r" value="nd" ${s.permuta_aceita === null || s.permuta_aceita === undefined ? 'checked' : ''}> Não definido
+               </label>
+             </div>
+             <textarea id="swal-condicoes" class="swal2-textarea" placeholder="Condições acordadas (opcional)" style="margin:0;width:100%">${escapeHtml(s.condicoes_permuta_aceita || '')}</textarea>`,
+      showCancelButton: true,
+      confirmButtonText: '💾 Salvar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#f97316',
+      preConfirm: () => ({
+        aceita: document.querySelector('input[name="permuta-r"]:checked')?.value,
+        condicoes: document.getElementById('swal-condicoes').value.trim()
+      })
+    });
+    if (!result.isConfirmed) return;
+    const { aceita, condicoes } = result.value;
+    const permutaVal = aceita === 'sim' ? true : aceita === 'nao' ? false : null;
+    const { error } = await cliente.from('interesse_vagas')
+      .update({ permuta_aceita: permutaVal, condicoes_permuta_aceita: condicoes || null })
+      .eq('id', id);
+    if (error) { showToast('❌ Erro: ' + error.message); return; }
+    s.permuta_aceita = permutaVal;
+    s.condicoes_permuta_aceita = condicoes || null;
+    document.getElementById('fin-permuta-display').innerHTML =
+      permutaVal !== null
+        ? `<span style="font-size:0.875rem;font-weight:700;color:${permutaVal ? '#15803d' : '#dc2626'}">${permutaVal ? '✅ Aceita' : '❌ Não aceita'}</span>`
+          + (permutaVal && condicoes ? `<p style="font-size:0.82rem;color:var(--gray-dark);margin:0.25rem 0 0">${escapeHtml(condicoes)}</p>` : '')
+        : '<span style="color:var(--gray);font-size:0.85rem">Não informado</span>';
+    await registrarLog('editar_financeiro', 'interesse_vagas', id, `Permuta: ${aceita} — ${condicoes || '–'}`);
+    showToast('✅ Permuta atualizada!');
+  }
+}
+
+async function imprimirFicha(id) {
+  const s = todasSolicitacoes.find(x => x.id === id);
+  if (!s) return;
+
+  const resp    = s.responsavel || {};
+  const alunos  = s.alunos || [];
+  const dataFmt = new Date(s.created_at).toLocaleString('pt-BR');
+  const updFmt  = s.updated_at ? new Date(s.updated_at).toLocaleString('pt-BR') : '–';
+
+  const totalAlunos = alunos.length;
+  const aprov       = alunos.filter(a => a.status_aluno === 'aprovado').length;
+  const matr        = alunos.filter(a => a.status_aluno === 'matriculado').length;
+  const temRessalva = s.status === 'aprovado' && totalAlunos > 0 && (aprov + matr) < totalAlunos;
+  const badgeLabel  = temRessalva ? 'Aprovada com ressalvas' : (STATUS_LABEL[s.status] || s.status);
+
+  // Buscar histórico
+  const { data: hist } = await cliente
+    .from('historico_solicitacoes')
+    .select('descricao, autor_nome, autor_tipo, created_at')
+    .eq('interesse_id', id)
+    .order('created_at', { ascending: true });
+
+  const alunosHtml = alunos.map((a, i) => {
+    const alocacao  = a.alocacoes?.[0];
+    const turmaInfo = alocacao?.turmas
+      ? `${alocacao.turmas.serie} – ${alocacao.turmas.nome_turma} (${alocacao.turmas.turno})`
+      : '–';
+    return `
+      <tr>
+        <td>${i+1}</td>
+        <td>${a.nome_aluno}</td>
+        <td>${SEGMENTO_LABEL[a.segmento] || a.segmento}</td>
+        <td>${a.turma}</td>
+        <td>${TURNO_LABEL[a.turno] || a.turno}</td>
+        <td>${STATUS_ALUNO_LABEL[a.status_aluno] || a.status_aluno || 'Pendente'}</td>
+        <td>${turmaInfo}</td>
+      </tr>`;
+  }).join('');
+
+  const histHtml = (hist || []).map(h => `
+    <tr>
+      <td>${new Date(h.created_at).toLocaleString('pt-BR')}</td>
+      <td>${h.autor_tipo === 'colaborador' ? 'Equipe Plenus' : 'Responsável'}</td>
+      <td>${h.descricao}</td>
+    </tr>`).join('');
+
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html lang="pt-br"><head>
+    <meta charset="UTF-8">
+    <title>Ficha de Atendimento – ${resp.nome || ''}</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: Arial, sans-serif; font-size: 12px; color: #1e293b; padding: 24px; }
+      h1 { font-size: 18px; color: #0f172a; margin-bottom: 4px; }
+      .sub { font-size: 11px; color: #64748b; margin-bottom: 20px; }
+      .badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; margin-left:8px; }
+      .badge.pendente { background:#fef3c7; color:#92400e; border-color:#fde68a; }
+      .badge.em_analise { background:#eff6ff; color:#1e40af; border-color:#bfdbfe; }
+      .badge.reprovado { background:#fef2f2; color:#b91c1c; border-color:#fecaca; }
+      .badge.cancelado { background:#f5f3ff; color:#7c3aed; border-color:#ddd6fe; }
+      .badge.matriculado { background:#ecfeff; color:#0e7490; border-color:#a5f3fc; }
+      section { margin-bottom: 18px; }
+      h2 { font-size: 13px; font-weight: 700; color: #0f172a; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: .04em; }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; }
+      .field label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: .04em; display: block; }
+      .field span { font-size: 12px; color: #1e293b; font-weight: 600; }
+      table { width: 100%; border-collapse: collapse; font-size: 11px; }
+      th { background: #f8fafc; text-align: left; padding: 5px 8px; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: #64748b; border: 1px solid #e2e8f0; }
+      td { padding: 5px 8px; border: 1px solid #e2e8f0; vertical-align: top; }
+      tr:nth-child(even) td { background: #f8fafc; }
+      .ressalva { background:#fef3c7; border:1px solid #fde68a; border-left:3px solid #f59e0b; padding:6px 10px; font-size:11px; color:#92400e; margin-bottom:10px; border-radius:0 4px 4px 0; }
+      .decisao { background:#f0fdf4; border:1px solid #bbf7d0; padding:8px 12px; border-radius:6px; }
+      .footer { margin-top:24px; border-top:1px solid #e2e8f0; padding-top:10px; font-size:10px; color:#94a3b8; text-align:center; }
+      @media print { body { padding: 12px; } }
+    </style>
+  </head><body>
+    <h1>Ficha de Atendimento <span class="badge ${s.status}">${badgeLabel}</span></h1>
+    <div class="sub">Colégio Plenus · Gerada em ${new Date().toLocaleString('pt-BR')}</div>
+
+    <section>
+      <h2>Responsável</h2>
+      <div class="grid">
+        <div class="field"><label>Nome</label><span>${resp.nome || '–'}</span></div>
+        <div class="field"><label>E-mail</label><span>${resp.email || '–'}</span></div>
+        <div class="field"><label>Telefone</label><span>${resp.telefone || '–'}</span></div>
+        <div class="field"><label>Data da solicitação</label><span>${dataFmt}</span></div>
+        <div class="field"><label>Última atualização</label><span>${updFmt}</span></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Alunos</h2>
+      ${temRessalva ? `<div class="ressalva">⚠️ Aprovada com ressalvas: ${aprov} de ${totalAlunos} aluno(s) aprovado(s).</div>` : ''}
+      <table>
+        <thead><tr><th>#</th><th>Nome</th><th>Segmento</th><th>Série</th><th>Turno</th><th>Status</th><th>Turma</th></tr></thead>
+        <tbody>${alunosHtml}</tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Motivos</h2>
+      <div class="grid">
+        <div class="field"><label>Motivo da Transferência</label><span>${s.motivo_transferencia || '–'}</span></div>
+        <div class="field"><label>Por que escolheu o Colégio Plenus</label><span>${s.motivo_escolha_plenus || '–'}</span></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Financeiro</h2>
+      <div class="grid">
+        <div class="field"><label>Mensalidade Atual</label><span>${s.valor_mensalidade_anterior ? formatarMoedaExibicao(s.valor_mensalidade_anterior) : '–'}</span></div>
+        <div class="field"><label>Desconto Almejado</label><span>${s.taxa_desconto_almejada ? s.taxa_desconto_almejada + '%' : '–'}</span></div>
+        <div class="field"><label>Tem Desconto Atual</label><span>${s.tem_desconto ? 'Sim' : 'Não'}${s.tem_desconto && s.descricao_desconto ? ' — ' + s.descricao_desconto : ''}</span></div>
+        <div class="field"><label>Permuta Solicitada</label><span>${PERMUTA_LABEL[s.tipo_permuta] || '–'}${s.tipo_permuta !== 'nao' && s.descricao_permuta ? ' — ' + s.descricao_permuta : ''}</span></div>
+      </div>
+      ${(s.desconto_concedido || s.permuta_aceita !== null && s.permuta_aceita !== undefined) ? `
+      <div class="decisao" style="margin-top:10px">
+        <strong style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#15803d">Decisão da Escola</strong>
+        <div class="grid" style="margin-top:6px">
+          <div class="field"><label>Desconto Concedido</label><span>${s.desconto_concedido || '–'}</span></div>
+          <div class="field"><label>Permuta</label><span>${s.permuta_aceita === true ? 'Aceita' : s.permuta_aceita === false ? 'Não aceita' : '–'}${s.permuta_aceita && s.condicoes_permuta_aceita ? ' — ' + s.condicoes_permuta_aceita : ''}</span></div>
+        </div>
+      </div>` : ''}
+    </section>
+
+    <section>
+      <h2>Histórico (${(hist||[]).length} entradas)</h2>
+      <table>
+        <thead><tr><th>Data/Hora</th><th>Por</th><th>Descrição</th></tr></thead>
+        <tbody>${histHtml || '<tr><td colspan="3" style="color:#94a3b8;text-align:center">Sem registros</td></tr>'}</tbody>
+      </table>
+    </section>
+
+    <div class="footer">Documento gerado automaticamente pelo sistema de gestão de vagas · Colégio Plenus</div>
+    <script>window.onload = () => { window.print(); }</script>
+  </body></html>`);
+  win.document.close();
 }
 
 function fecharModal() {

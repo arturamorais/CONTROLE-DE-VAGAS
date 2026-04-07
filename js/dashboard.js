@@ -635,7 +635,7 @@ async function carregarSolicitacoes() {
   const { data: { user } } = await cliente.auth.getUser();
   const { data, error } = await cliente
     .from('interesse_vagas')
-    .select('*, alunos(*), historico_solicitacoes(descricao, autor_tipo, created_at)')
+    .select('*, alunos(*), historico_solicitacoes(descricao, autor_tipo, created_at), desconto_concedido, permuta_aceita, condicoes_permuta_aceita')
     .eq('usuario_id', user.id).order('created_at', { ascending: false });
 
   if (error) { container.innerHTML = `<div class="alert alert-error">Erro: ${error.message}</div>`; return; }
@@ -695,17 +695,33 @@ async function carregarSolicitacoes() {
 
     const badgeLabel = temRessalva ? 'Aprovada com ressalvas' : statusLabel;
 
+    // Decisão financeira da escola (somente leitura para o responsável)
+    const temDecisaoFin = s.desconto_concedido || s.permuta_aceita !== null && s.permuta_aceita !== undefined;
+    const decisaoFinHtml = temDecisaoFin ? `
+      <div style="margin-top:0.75rem;background:#f0fdf4;border:1px solid #bbf7d0;border-left:3px solid #22c55e;border-radius:0 0.5rem 0.5rem 0;padding:0.625rem 0.875rem">
+        <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#15803d;margin-bottom:0.4rem">✅ Decisão da Escola</div>
+        <div style="display:flex;flex-wrap:wrap;gap:1rem">
+          ${s.desconto_concedido ? `<div style="font-size:0.82rem"><span style="color:#64748b">Desconto concedido:</span> <strong style="color:#15803d">${escapeHtmlDash(s.desconto_concedido)}</strong></div>` : ''}
+          ${s.permuta_aceita !== null && s.permuta_aceita !== undefined
+            ? `<div style="font-size:0.82rem"><span style="color:#64748b">Permuta:</span> <strong style="color:${s.permuta_aceita ? '#15803d' : '#dc2626'}">${s.permuta_aceita ? 'Aceita' : 'Não aceita'}</strong>${s.permuta_aceita && s.condicoes_permuta_aceita ? ` — ${escapeHtmlDash(s.condicoes_permuta_aceita)}` : ''}</div>`
+            : ''}
+        </div>
+      </div>` : '';
+
     return `
       <div class="solicitacao-card">
         <div class="solicitacao-info" style="flex:1">
           <h3>🎒 ${numAlunos} aluno${numAlunos !== 1 ? 's' : ''} · ${data_fmt}</h3>
           <p style="margin-top:0.35rem; line-height:1.6">${alunosNomes}</p>
           ${ressalvaHtml}
+          ${decisaoFinHtml}
           ${historicoHtml}
         </div>
         <div class="solicitacao-meta" style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;flex-wrap:wrap">
           <span class="status-badge status-${s.status}">${badgeLabel}</span>
-          ${podeEditar ? `<button class="btn btn-secondary btn-sm" onclick="editarSolicitacao('${s.id}')">✏️ Editar</button>` : ''}
+          ${podeEditar
+            ? `<button class="btn btn-secondary btn-sm" onclick="editarSolicitacao('${s.id}')">✏️ Editar</button>`
+            : `<span style="font-size:0.72rem;color:var(--gray);font-style:italic">Somente leitura</span>`}
         </div>
       </div>`;
   }).join('');
