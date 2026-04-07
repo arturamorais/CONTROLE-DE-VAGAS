@@ -1265,28 +1265,71 @@ async function editarFinanceiro(id, campo) {
     showToast('✅ Desconto atualizado!');
 
   } else {
+    const valorInicial = s.permuta_aceita === true ? 'sim' : s.permuta_aceita === false ? 'nao' : 'nd';
+
+    const OPTS = [
+      { val: 'sim', icon: '✅', label: 'Aceita',      bg: '#f0fdf4', border: '#22c55e', color: '#15803d' },
+      { val: 'nao', icon: '❌', label: 'Não aceita',  bg: '#fef2f2', border: '#ef4444', color: '#dc2626' },
+      { val: 'nd',  icon: '–',  label: 'Não definido', bg: '#f8fafc', border: '#94a3b8', color: '#64748b' }
+    ];
+
     result = await Swal.fire({
-      title: '🔄 Permuta',
-      html: `<p style="font-size:0.85rem;color:#475569;margin-bottom:0.75rem">A permuta foi aceita?</p>
-             <div style="display:flex;gap:0.75rem;justify-content:center;margin-bottom:1rem">
-               <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.875rem;cursor:pointer">
-                 <input type="radio" name="permuta-r" value="sim" ${s.permuta_aceita === true ? 'checked' : ''}> Sim, aceita
-               </label>
-               <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.875rem;cursor:pointer">
-                 <input type="radio" name="permuta-r" value="nao" ${s.permuta_aceita === false ? 'checked' : ''}> Não aceita
-               </label>
-               <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.875rem;cursor:pointer">
-                 <input type="radio" name="permuta-r" value="nd" ${s.permuta_aceita === null || s.permuta_aceita === undefined ? 'checked' : ''}> Não definido
-               </label>
-             </div>
-             <textarea id="swal-condicoes" class="swal2-textarea" placeholder="Condições acordadas (opcional)" style="margin:0;width:100%">${escapeHtml(s.condicoes_permuta_aceita || '')}</textarea>`,
+      title: '<span style="font-size:1rem;font-weight:700">🔄 Decisão sobre Permuta</span>',
+      html: `
+        <div style="text-align:left;padding:0 0.125rem">
+          <p style="font-size:0.82rem;color:#64748b;margin-bottom:1.125rem;line-height:1.5">
+            Informe se a permuta solicitada pelo responsável foi aceita pela escola.
+          </p>
+
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.625rem;margin-bottom:1.25rem">
+            ${OPTS.map(o => `
+            <button type="button" class="permuta-opt-btn" data-val="${o.val}"
+              style="padding:0.875rem 0.5rem;border-radius:0.625rem;border:2px solid ${o.val === valorInicial ? o.border : '#e2e8f0'};
+                     background:${o.val === valorInicial ? o.bg : 'white'};color:${o.val === valorInicial ? o.color : '#94a3b8'};
+                     cursor:pointer;transition:all 0.15s;font-family:inherit;width:100%">
+              <div style="font-size:1.4rem;margin-bottom:0.35rem;line-height:1">${o.icon}</div>
+              <div style="font-size:0.78rem;font-weight:700;line-height:1.3">${o.label}</div>
+            </button>`).join('')}
+          </div>
+
+          <div id="condicoes-wrap" style="display:${valorInicial === 'sim' ? 'block' : 'none'}">
+            <label style="font-size:0.78rem;font-weight:700;color:#475569;display:block;margin-bottom:0.375rem;text-transform:uppercase;letter-spacing:0.04em">Condições acordadas</label>
+            <textarea id="swal-condicoes" rows="3"
+              style="width:100%;padding:0.625rem 0.75rem;border:1.5px solid #e2e8f0;border-radius:0.5rem;font-size:0.85rem;font-family:inherit;resize:vertical;outline:none;color:#0f172a;line-height:1.5"
+              placeholder="Descreva as condições da permuta...">${escapeHtml(s.condicoes_permuta_aceita || '')}</textarea>
+          </div>
+
+          <input type="hidden" id="permuta-valor" value="${valorInicial}">
+        </div>`,
       showCancelButton: true,
       confirmButtonText: '💾 Salvar',
       cancelButtonText: 'Cancelar',
       confirmButtonColor: '#f97316',
+      cancelButtonColor: '#94a3b8',
+      width: '420px',
+      didOpen: (popup) => {
+        const OPTS_MAP = { sim: OPTS[0], nao: OPTS[1], nd: OPTS[2] };
+        popup.querySelectorAll('.permuta-opt-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const val = btn.dataset.val;
+            popup.querySelector('#permuta-valor').value = val;
+            popup.querySelectorAll('.permuta-opt-btn').forEach(b => {
+              b.style.background   = 'white';
+              b.style.borderColor  = '#e2e8f0';
+              b.style.color        = '#94a3b8';
+            });
+            const o = OPTS_MAP[val];
+            btn.style.background  = o.bg;
+            btn.style.borderColor = o.border;
+            btn.style.color       = o.color;
+            const wrap = popup.querySelector('#condicoes-wrap');
+            if (wrap) wrap.style.display = val === 'sim' ? 'block' : 'none';
+          });
+        });
+      },
       preConfirm: () => ({
-        aceita: document.querySelector('input[name="permuta-r"]:checked')?.value,
-        condicoes: document.getElementById('swal-condicoes').value.trim()
+        aceita: document.getElementById('permuta-valor').value,
+        condicoes: document.getElementById('swal-condicoes')?.value?.trim() || ''
       })
     });
     if (!result.isConfirmed) return;
