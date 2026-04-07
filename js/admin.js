@@ -1442,9 +1442,15 @@ async function imprimirFicha(id) {
       .status-badge { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 20px; font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; background: ${STATUS_BG[s.status]}; color: ${STATUS_CL[s.status]}; border: 1px solid ${STATUS_BD[s.status]}; }
       .status-dates { font-size: 8.5px; color: #64748b; }
 
-      /* Two-column content */
-      .content { padding: 12px 20px 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; flex: 1; align-content: start; overflow: hidden; }
-      .col-span { grid-column: 1 / -1; }
+      /* Content wrapper */
+      .content { padding: 12px 20px 8px; display: flex; flex-direction: column; gap: 10px; flex: 1; overflow: hidden; }
+
+      /* Two-column row */
+      .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; }
+
+      /* Anotações */
+      .anotacoes-wrap { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+      .anotacoes-area { flex: 1; border: 1.5px dashed #cbd5e1; border-radius: 6px; background: #fafafa; min-height: 0; }
 
       /* Section */
       .sec { margin-bottom: 10px; }
@@ -1508,7 +1514,9 @@ async function imprimirFicha(id) {
 
     <div class="content">
 
-      ${temRessalva ? `<div class="col-span"><div class="ressalva">⚠️ <strong>Aprovada com ressalvas:</strong> ${aprov} de ${totalAlunos} aluno${totalAlunos !== 1 ? 's' : ''} aprovado${aprov !== 1 ? 's' : ''}.</div></div>` : ''}
+      ${temRessalva ? `<div class="ressalva">⚠️ <strong>Aprovada com ressalvas:</strong> ${aprov} de ${totalAlunos} aluno${totalAlunos !== 1 ? 's' : ''} aprovado${aprov !== 1 ? 's' : ''}.</div>` : ''}
+
+      <div class="cols">
 
       <!-- Coluna esquerda: Responsável + Alunos -->
       <div>
@@ -1562,6 +1570,14 @@ async function imprimirFicha(id) {
           <div class="sec-title">🕐 Histórico (${(hist||[]).length})</div>
           ${histTimelineHtml}
         </div>
+      </div>
+
+      </div><!-- /cols -->
+
+      <!-- Anotações -->
+      <div class="anotacoes-wrap">
+        <div class="sec-title">✏️ Anotações do atendimento</div>
+        <div class="anotacoes-area"></div>
       </div>
 
     </div>
