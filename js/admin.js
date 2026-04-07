@@ -1261,6 +1261,8 @@ async function editarFinanceiro(id, campo) {
     document.getElementById('fin-desconto-display').innerHTML = val
       ? `<span style="font-size:0.95rem;font-weight:700;color:#15803d">${escapeHtml(val)}</span>`
       : '<span style="color:var(--gray);font-size:0.85rem">Não informado</span>';
+    const nomeColabDesc = document.getElementById('sidebar-nome').textContent.trim() || 'Colaborador';
+    await registrarHistorico(id, val ? `Desconto concedido: ${val}` : 'Desconto concedido removido.', nomeColabDesc);
     await registrarLog('editar_financeiro', 'interesse_vagas', id, `Desconto concedido: ${val || 'removido'}`);
     showToast('✅ Desconto atualizado!');
 
@@ -1346,6 +1348,10 @@ async function editarFinanceiro(id, campo) {
         ? `<span style="font-size:0.875rem;font-weight:700;color:${permutaVal ? '#15803d' : '#dc2626'}">${permutaVal ? '✅ Aceita' : '❌ Não aceita'}</span>`
           + (permutaVal && condicoes ? `<p style="font-size:0.82rem;color:var(--gray-dark);margin:0.25rem 0 0">${escapeHtml(condicoes)}</p>` : '')
         : '<span style="color:var(--gray);font-size:0.85rem">Não informado</span>';
+    const nomeColabPerm = document.getElementById('sidebar-nome').textContent.trim() || 'Colaborador';
+    const permulaLabel  = aceita === 'sim' ? 'Aceita' : aceita === 'nao' ? 'Não aceita' : 'Não definida';
+    const permulaMsg    = `Permuta: ${permulaLabel}` + (aceita === 'sim' && condicoes ? ` — ${condicoes}` : '');
+    await registrarHistorico(id, permulaMsg, nomeColabPerm);
     await registrarLog('editar_financeiro', 'interesse_vagas', id, `Permuta: ${aceita} — ${condicoes || '–'}`);
     showToast('✅ Permuta atualizada!');
   }
@@ -1881,6 +1887,8 @@ async function atualizarStatusGeral(interesseId) {
   if (error) return;
 
   s.status = 'aprovado';
+  const nomeColab = document.getElementById('sidebar-nome')?.textContent.trim() || 'Sistema';
+  await registrarHistorico(interesseId, 'Todos os alunos aprovados — solicitação promovida automaticamente para Aprovada.', nomeColab);
   await carregarStats();
   await carregarUltimasSolicitacoes();
   filtrarSolicitacoes();
@@ -2166,6 +2174,9 @@ async function executarStatusDireto(id, novoStatus) {
     await cliente.from('alunos').update({ status_aluno: statusAluno, motivo_reprovacao: null })
       .in('id', alunosAfetados.map(a => a.id));
     alunosAfetados.forEach(a => { a.status_aluno = statusAluno; a.motivo_reprovacao = null; });
+    for (const a of alunosAfetados) {
+      await registrarHistorico(id, `Aluno "${a.nome_aluno}" → ${STATUS_ALUNO_LABEL[statusAluno] || statusAluno}.`, nomeColaborador);
+    }
   }
 
   await registrarHistorico(id, `Status alterado de "${statusAnterior}" para "${STATUS_LABEL[novoStatus]}"`, nomeColaborador);
@@ -2243,6 +2254,9 @@ async function executarAtualizacaoStatus(id, novoStatus) {
     await cliente.from('alunos').update({ status_aluno: statusAluno, motivo_reprovacao: null })
       .in('id', alunosAfetados.map(a => a.id));
     alunosAfetados.forEach(a => { a.status_aluno = statusAluno; a.motivo_reprovacao = null; });
+    for (const a of alunosAfetados) {
+      await registrarHistorico(id, `Aluno "${a.nome_aluno}" → ${STATUS_ALUNO_LABEL[statusAluno] || statusAluno}.`, nomeColaborador);
+    }
   }
 
   // Ao cancelar: remove alocações de todos os alunos enturmados
