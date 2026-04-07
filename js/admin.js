@@ -1413,7 +1413,7 @@ async function imprimirFicha(id) {
       <div style="display:flex;gap:7px;align-items:flex-start;padding:4px 0;border-bottom:1px solid #f1f5f9">
         <div style="width:20px;height:20px;border-radius:50%;background:${isColab ? '#fff7ed' : '#eff6ff'};border:1.5px solid ${isColab ? '#fed7aa' : '#bfdbfe'};display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0">${isColab ? '🏫' : '👤'}</div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:9px;font-weight:600;color:#0f172a;line-height:1.4">${h.descricao}</div>
+          <div style="font-size:9px;font-weight:600;color:#0f172a;line-height:1.4;white-space:pre-line">${escapeHtml(h.descricao)}</div>
           <div style="font-size:8px;color:#94a3b8;margin-top:1px">${new Date(h.created_at).toLocaleString('pt-BR')} · <span style="font-weight:600;color:${isColab ? '#ea580c' : '#2563eb'}">${isColab ? 'Equipe Plenus' : (h.autor_nome || 'Responsável')}</span></div>
         </div>
       </div>`;

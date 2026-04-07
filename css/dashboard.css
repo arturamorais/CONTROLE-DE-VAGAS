@@ -1009,7 +1009,7 @@ button { cursor: pointer; font-family: inherit; }
 .historico-dot.colaborador { background: var(--orange); }
 
 .historico-info { display: flex; flex-direction: column; gap: 0.05rem; }
-.historico-desc { font-weight: 600; color: var(--navy-mid); }
+.historico-desc { font-weight: 600; color: var(--navy-mid); white-space: pre-line; }
 .historico-meta { font-size: 0.7rem; color: var(--gray); }
 
 /* Acessibilidade */

@@ -526,34 +526,77 @@ function cancelarEdicao() {
 function _buildMsgEdicao(novosCampos, novosAlunos) {
   if (!_dadosOriginaisEdicao) return 'Solicitação editada pelo responsável.';
 
-  const orig = _dadosOriginaisEdicao;
-  const alteracoes = [];
+  const orig   = _dadosOriginaisEdicao;
+  const linhas = [];
 
-  const LABELS = {
-    motivo_transferencia:       'Motivo de transferência',
-    motivo_escolha_plenus:      'Motivo de escolha do Plenus',
-    valor_mensalidade_anterior: 'Mensalidade atual',
-    tem_desconto:               'Possui desconto atual',
-    descricao_desconto:         'Descrição do desconto',
-    taxa_desconto_almejada:     'Desconto almejado',
-    tipo_permuta:               'Tipo de permuta',
-    descricao_permuta:          'Descrição da permuta',
+  const trunc = (s, max = 70) => {
+    const str = (s || '').replace(/\n/g, ' ').trim();
+    return str.length > max ? str.slice(0, max) + '…' : str || '–';
   };
 
-  for (const [campo, label] of Object.entries(LABELS)) {
-    if (String(orig[campo] ?? '') !== String(novosCampos[campo] ?? '')) {
-      alteracoes.push(label);
-    }
+  // Campos de texto longo
+  const textCampos = [
+    { campo: 'motivo_transferencia',  label: 'Motivo de transferência' },
+    { campo: 'motivo_escolha_plenus', label: 'Motivo de escolha do Plenus' },
+    { campo: 'descricao_desconto',    label: 'Descrição do desconto' },
+    { campo: 'descricao_permuta',     label: 'Descrição da permuta' },
+  ];
+  for (const { campo, label } of textCampos) {
+    const ant = (orig[campo] || '').trim();
+    const nov = (novosCampos[campo] || '').trim();
+    if (ant === nov) continue;
+    if (!ant)      linhas.push(`${label}: adicionado "${trunc(nov)}"`);
+    else if (!nov) linhas.push(`${label}: removido "${trunc(ant)}"`);
+    else           linhas.push(`${label}: "${trunc(ant)}" → "${trunc(nov)}"`);
   }
 
-  const strAluno = a => `${a.nome_aluno}|${a.segmento}|${a.turma}|${a.turno}`;
-  const antStr = (orig.alunos || []).map(strAluno).sort().join(';');
-  const novStr = novosAlunos.map(strAluno).sort().join(';');
-  if (antStr !== novStr) alteracoes.push('Alunos');
+  // Booleano
+  const antDesc = orig.tem_desconto ?? false;
+  const novDesc = novosCampos.tem_desconto ?? false;
+  if (String(antDesc) !== String(novDesc))
+    linhas.push(`Possui desconto atual: ${antDesc ? 'Sim' : 'Não'} → ${novDesc ? 'Sim' : 'Não'}`);
 
-  return alteracoes.length
-    ? `Solicitação editada pelo responsável. Campos alterados: ${alteracoes.join(', ')}.`
-    : 'Solicitação editada pelo responsável (nenhuma alteração detectada).';
+  // Numéricos
+  const fmtMoeda = v => v != null ? `R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '–';
+  if (String(orig.valor_mensalidade_anterior ?? '') !== String(novosCampos.valor_mensalidade_anterior ?? ''))
+    linhas.push(`Mensalidade atual: ${fmtMoeda(orig.valor_mensalidade_anterior)} → ${fmtMoeda(novosCampos.valor_mensalidade_anterior)}`);
+
+  if (String(orig.taxa_desconto_almejada ?? '') !== String(novosCampos.taxa_desconto_almejada ?? ''))
+    linhas.push(`Desconto almejado: ${orig.taxa_desconto_almejada != null ? orig.taxa_desconto_almejada + '%' : '–'} → ${novosCampos.taxa_desconto_almejada != null ? novosCampos.taxa_desconto_almejada + '%' : '–'}`);
+
+  // Permuta
+  const PERM_LBL = { nao: 'Não', servico: 'Serviço', produto: 'Produto', outro: 'Outro' };
+  if (String(orig.tipo_permuta ?? '') !== String(novosCampos.tipo_permuta ?? ''))
+    linhas.push(`Tipo de permuta: ${PERM_LBL[orig.tipo_permuta] || orig.tipo_permuta || '–'} → ${PERM_LBL[novosCampos.tipo_permuta] || novosCampos.tipo_permuta || '–'}`);
+
+  // Alunos: comparar por nome (lowercase) para detectar add / remove / mudança
+  const TURNO_LBL_E = { manha: 'Manhã', tarde: 'Tarde', integral: 'Integral' };
+  const SEG_LBL_E   = { educacao_infantil: 'Ed. Infantil', fundamental1: 'Fund. 1', fundamental2: 'Fund. 2', ensino_medio: 'Ens. Médio' };
+  const fmtAluno    = a => `${SEG_LBL_E[a.segmento] || a.segmento} · ${a.turma} · ${TURNO_LBL_E[a.turno] || a.turno}`;
+
+  const origByNome = Object.fromEntries((orig.alunos || []).map(a => [(a.nome_aluno || '').toLowerCase(), a]));
+  const novByNome  = Object.fromEntries(novosAlunos.map(a => [(a.nome_aluno || '').toLowerCase(), a]));
+
+  for (const a of novosAlunos) {
+    const key = (a.nome_aluno || '').toLowerCase();
+    if (!origByNome[key]) {
+      linhas.push(`Aluno adicionado: ${a.nome_aluno} (${fmtAluno(a)})`);
+    } else {
+      const o = origByNome[key];
+      const diffs = [];
+      if (o.segmento !== a.segmento) diffs.push(`segmento: ${SEG_LBL_E[o.segmento] || o.segmento} → ${SEG_LBL_E[a.segmento] || a.segmento}`);
+      if (o.turma    !== a.turma)    diffs.push(`turma: ${o.turma} → ${a.turma}`);
+      if (o.turno    !== a.turno)    diffs.push(`turno: ${TURNO_LBL_E[o.turno] || o.turno} → ${TURNO_LBL_E[a.turno] || a.turno}`);
+      if (diffs.length) linhas.push(`Aluno alterado: ${a.nome_aluno} (${diffs.join(', ')})`);
+    }
+  }
+  for (const a of (orig.alunos || [])) {
+    if (!novByNome[(a.nome_aluno || '').toLowerCase()])
+      linhas.push(`Aluno removido: ${a.nome_aluno} (${fmtAluno(a)})`);
+  }
+
+  if (!linhas.length) return 'Solicitação editada pelo responsável (nenhuma alteração detectada).';
+  return 'Solicitação editada pelo responsável.\n' + linhas.map(l => `• ${l}`).join('\n');
 }
 
 // ============================================================
@@ -724,7 +767,7 @@ async function carregarSolicitacoes() {
             <div style="display:flex;gap:0.625rem;align-items:flex-start">
               <div style="width:28px;height:28px;border-radius:50%;background:${isColab ? '#fff7ed' : '#eff6ff'};border:2px solid ${isColab ? '#fed7aa' : '#bfdbfe'};display:flex;align-items:center;justify-content:center;font-size:0.7rem;flex-shrink:0;margin-top:1px">${isColab ? '🏫' : '👤'}</div>
               <div style="flex:1;min-width:0">
-                <div style="font-size:0.8rem;font-weight:600;color:var(--navy-mid);line-height:1.45">${h.descricao}</div>
+                <div style="font-size:0.8rem;font-weight:600;color:var(--navy-mid);line-height:1.45;white-space:pre-line">${escapeHtmlDash(h.descricao)}</div>
                 <div style="font-size:0.7rem;color:var(--gray);margin-top:0.1rem">${new Date(h.created_at).toLocaleString('pt-BR')} · <span style="font-weight:600;color:${isColab ? '#ea580c' : '#2563eb'}">${isColab ? 'Equipe Plenus' : 'Você'}</span></div>
               </div>
             </div>`;
