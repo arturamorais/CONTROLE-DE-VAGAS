@@ -708,17 +708,23 @@ async function carregarSolicitacoes() {
         </div>
       </div>` : '';
 
+    const STATUS_BORDER = { pendente:'var(--amber)', em_analise:'var(--blue)', aprovado:'var(--green)', reprovado:'var(--red)', cancelado:'#7c3aed', matriculado:'#0e7490' };
+    const leftColor = STATUS_BORDER[s.status] || 'var(--gray-light)';
+
     return `
-      <div class="solicitacao-card">
+      <div class="solicitacao-card" style="border-left:4px solid ${leftColor}">
         <div class="solicitacao-info" style="flex:1">
-          <h3>🎒 ${numAlunos} aluno${numAlunos !== 1 ? 's' : ''} · ${data_fmt}</h3>
-          <p style="margin-top:0.35rem; line-height:1.6">${alunosNomes}</p>
+          <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.4rem">
+            <span class="status-badge status-${s.status}">${badgeLabel}</span>
+            <span style="font-size:0.75rem;color:var(--gray)">📅 ${data_fmt}</span>
+          </div>
+          <h3 style="font-size:0.9rem;margin:0 0 0.3rem">🎒 ${numAlunos} aluno${numAlunos !== 1 ? 's' : ''}</h3>
+          <p style="margin:0;line-height:1.6;color:var(--gray-dark)">${alunosNomes}</p>
           ${ressalvaHtml}
           ${decisaoFinHtml}
           ${historicoHtml}
         </div>
-        <div class="solicitacao-meta" style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;flex-wrap:wrap">
-          <span class="status-badge status-${s.status}">${badgeLabel}</span>
+        <div class="solicitacao-meta" style="display:flex;flex-direction:column;align-items:flex-end;gap:0.5rem;flex-shrink:0">
           ${podeEditar
             ? `<button class="btn btn-secondary btn-sm" onclick="editarSolicitacao('${s.id}')">✏️ Editar</button>`
             : `<span style="font-size:0.72rem;color:var(--gray);font-style:italic">Somente leitura</span>`}

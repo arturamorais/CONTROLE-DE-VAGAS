@@ -974,7 +974,7 @@ function renderSolicitacoes(lista) {
     const slaBg    = dias >= 7 ? '#fee2e2' : dias >= 3 ? '#fef3c7' : '#dcfce7';
     const slaBorder= dias >= 7 ? '#fecaca' : dias >= 3 ? '#fde68a' : '#bbf7d0';
     const slaHtml  = slaAtivo
-      ? `<span style="font-size:0.68rem;font-weight:700;padding:0.2rem 0.55rem;border-radius:9999px;background:${slaBg};color:${slaCor};border:1px solid ${slaBorder};white-space:nowrap">⏱ ${dias === 0 ? 'Hoje' : dias === 1 ? '1 dia' : dias + ' dias'}</span>`
+      ? `<span style="font-size:0.67rem;font-weight:700;padding:0.2rem 0.5rem;border-radius:9999px;background:${slaBg};color:${slaCor};border:1px solid ${slaBorder};white-space:nowrap">⏱ ${dias === 0 ? 'Hoje' : dias === 1 ? '1 dia' : dias + ' dias'}</span>`
       : '';
 
     const totalAlunos  = alunos.length;
@@ -986,10 +986,12 @@ function renderSolicitacoes(lista) {
 
     const alunosTags = alunos.map(a => {
       const st = a.status_aluno || 'pendente';
-      const cor = st === 'aprovado' ? 'background:#dcfce7;color:#15803d;border-color:#bbf7d0'
-                : st === 'reprovado' ? 'background:#fee2e2;color:#dc2626;border-color:#fecaca'
+      const cor = st === 'aprovado'   ? 'background:#dcfce7;color:#15803d;border-color:#bbf7d0'
+                : st === 'reprovado'  ? 'background:#fee2e2;color:#dc2626;border-color:#fecaca'
+                : st === 'matriculado'? 'background:#ecfeff;color:#0e7490;border-color:#a5f3fc'
                 : '';
-      return `<span class="aluno-tag" style="${cor}">🎒 ${a.nome_aluno} · ${SEGMENTO_LABEL[a.segmento] || a.segmento} · ${a.turma}</span>`;
+      const icon = st === 'aprovado' ? '✅' : st === 'reprovado' ? '✕' : st === 'matriculado' ? '🎓' : '🎒';
+      return `<span class="aluno-tag" style="${cor}">${icon} ${escapeHtml(a.nome_aluno)} · ${SEGMENTO_LABEL[a.segmento] || a.segmento} · ${a.turma}</span>`;
     }).join('');
 
     const guiaBtn = GUIA_BTN[s.status]
@@ -997,53 +999,47 @@ function renderSolicitacoes(lista) {
       : '';
 
     const ressalvaHtml = temRessalva ? `
-      <div style="background:#fef3c7;border:1px solid #fde68a;border-left:3px solid #f59e0b;border-radius:0 0.5rem 0.5rem 0;padding:0.5rem 0.75rem;font-size:0.78rem;color:#92400e;line-height:1.5">
+      <div style="background:#fef3c7;border:1px solid #fde68a;border-left:3px solid #f59e0b;border-radius:0 0.375rem 0.375rem 0;padding:0.45rem 0.75rem;font-size:0.775rem;color:#92400e;line-height:1.5">
         ⚠️ <strong>Aprovada com ressalvas:</strong> ${aprov} de ${totalAlunos} aluno${totalAlunos !== 1 ? 's' : ''} aprovado${aprov !== 1 ? 's' : ''}${reprov > 0 ? ` · ${reprov} reprovado${reprov !== 1 ? 's' : ''}` : ''}.
       </div>` : '';
 
     return `
       <div class="solicitacao-admin-card border-${s.status}" onclick="abrirDetalhe('${s.id}')">
-        <div class="card-row-top">
-          <div class="meta">
-            <span class="status-badge status-${s.status}">${badgeLabel}</span>
-            ${slaHtml}
-            <span class="card-data">📅 ${dataFmt}</span>
+
+        <!-- Top: name + status + actions -->
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;flex-wrap:wrap">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.3rem">
+              <span class="status-badge status-${s.status}">${badgeLabel}</span>
+              ${slaHtml}
+            </div>
+            <div style="font-size:1rem;font-weight:800;color:var(--navy-mid);line-height:1.25;margin-bottom:0.25rem">${escapeHtml(resp.nome || '–')}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:0.875rem">
+              ${resp.email    ? `<span style="font-size:0.775rem;color:var(--gray-dark)">📧 ${escapeHtml(resp.email)}</span>` : ''}
+              ${resp.telefone ? `<span style="font-size:0.775rem;color:var(--gray-dark)">📞 ${escapeHtml(resp.telefone)}</span>` : ''}
+              <span style="font-size:0.72rem;color:var(--gray)">📅 ${dataFmt}</span>
+            </div>
           </div>
-          <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+          <div style="display:flex;gap:0.4rem;flex-wrap:wrap;flex-shrink:0" onclick="event.stopPropagation()">
             ${guiaBtn}
-            <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); imprimirFicha('${s.id}')">
-              🖨️ Ficha
-            </button>
-            <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); abrirDetalhe('${s.id}')">
-              Ver Detalhes →
-            </button>
+            <button class="btn btn-secondary btn-sm" onclick="imprimirFicha('${s.id}')">🖨️ Ficha</button>
+            <button class="btn btn-primary btn-sm" onclick="abrirDetalhe('${s.id}')">Ver Detalhes →</button>
           </div>
         </div>
 
-        <div class="info-items">
-          <div class="info-item">
-            <span class="info-label">Responsável</span>
-            <span class="info-value">${resp.nome || '–'}</span>
+        <!-- Financial info strip -->
+        <div style="display:flex;flex-wrap:wrap;gap:1.5rem;padding:0.625rem 0;border-top:1px solid var(--gray-light);border-bottom:1px solid var(--gray-light)">
+          <div>
+            <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--gray)">Mensalidade atual</div>
+            <div style="font-size:0.875rem;font-weight:700;color:var(--navy-mid);margin-top:0.1rem">${s.valor_mensalidade_anterior ? formatarMoedaExibicao(s.valor_mensalidade_anterior) : '–'}</div>
           </div>
-          <div class="info-item">
-            <span class="info-label">Telefone</span>
-            <span class="info-value">${resp.telefone || '–'}</span>
+          <div>
+            <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--gray)">Desconto almejado</div>
+            <div style="font-size:0.875rem;font-weight:700;color:var(--navy-mid);margin-top:0.1rem">${s.taxa_desconto_almejada ? s.taxa_desconto_almejada + '%' : '–'}</div>
           </div>
-          <div class="info-item">
-            <span class="info-label">E-mail</span>
-            <span class="info-value">${resp.email || '–'}</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">Mensalidade Atual</span>
-            <span class="info-value">${s.valor_mensalidade_anterior ? formatarMoedaExibicao(s.valor_mensalidade_anterior) : '–'}</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">Desconto Almejado</span>
-            <span class="info-value">${s.taxa_desconto_almejada ? s.taxa_desconto_almejada + '%' : '–'}</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">Permuta</span>
-            <span class="info-value">${PERMUTA_LABEL[s.tipo_permuta] || '–'}</span>
+          <div>
+            <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--gray)">Permuta</div>
+            <div style="font-size:0.875rem;font-weight:600;color:var(--navy-mid);margin-top:0.1rem">${PERMUTA_LABEL[s.tipo_permuta] || '–'}</div>
           </div>
         </div>
 
@@ -1072,132 +1068,135 @@ function abrirDetalhe(id) {
   const temRessalva = s.status === 'aprovado' && totalAlunos > 0 && (aprov + matrAlunos) < totalAlunos;
   const badgeLabel  = temRessalva ? 'Aprovada com ressalvas' : STATUS_LABEL[s.status];
 
+  const guiaBtnLabel = { pendente: '📋 Como Avaliar', em_analise: '🔍 Como Prosseguir', aprovado: '🎓 Próximos Passos' }[s.status];
+
   document.getElementById('modal-content').innerHTML = `
-    <!-- Cabeçalho -->
-    <div class="modal-header" style="padding:1rem 1.25rem">
-      <div style="flex:1;min-width:0">
-        <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.375rem">
-          <h2 style="font-size:1rem;margin:0">${escapeHtml(resp.nome || 'Responsável sem nome')}</h2>
-          <span class="status-badge status-${s.status}" style="font-size:0.72rem">${badgeLabel}</span>
-          ${gerarBotoesStatus(s.status, id)}
+
+    <!-- Cabeçalho colorido por status -->
+    <div class="modal-head-${s.status}" style="padding:1.25rem 1.5rem 1rem;border-bottom:1px solid var(--gray-light)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.4rem">
+            <span class="status-badge status-${s.status}">${badgeLabel}</span>
+            ${gerarBotoesStatus(s.status, id)}
+          </div>
+          <h2 style="font-size:1.2rem;font-weight:800;color:var(--navy-mid);margin:0 0 0.35rem;line-height:1.2;letter-spacing:-0.3px">${escapeHtml(resp.nome || 'Responsável sem nome')}</h2>
+          <div style="display:flex;flex-wrap:wrap;gap:0.875rem">
+            ${resp.email    ? `<span style="font-size:0.8rem;color:var(--gray-dark)">📧 ${escapeHtml(resp.email)}</span>` : ''}
+            ${resp.telefone ? `<span style="font-size:0.8rem;color:var(--gray-dark)">📞 ${escapeHtml(resp.telefone)}</span>` : ''}
+            <span style="font-size:0.75rem;color:var(--gray)">🗓️ ${dataFmt}</span>
+          </div>
         </div>
-        <div class="contato" style="font-size:0.78rem;gap:0.75rem">
-          ${resp.email    ? `<span>📧 ${escapeHtml(resp.email)}</span>` : ''}
-          ${resp.telefone ? `<span>📞 ${escapeHtml(resp.telefone)}</span>` : ''}
-          <span style="color:var(--gray)">🗓️ ${dataFmt}</span>
-        </div>
+        <button class="btn-modal-close" onclick="fecharModal()">✕</button>
       </div>
-      <button class="btn-modal-close" onclick="fecharModal()">✕</button>
     </div>
 
     ${temRessalva ? `
-    <div style="background:#fef3c7;border-bottom:1px solid #fde68a;padding:0.5rem 1.25rem;font-size:0.8rem;color:#92400e;line-height:1.5">
+    <div style="background:#fef3c7;border-bottom:2px solid #fde68a;padding:0.5rem 1.5rem;font-size:0.8rem;color:#92400e;line-height:1.5">
       ⚠️ <strong>Aprovada com ressalvas:</strong> ${aprov} de ${totalAlunos} aluno${totalAlunos !== 1 ? 's' : ''} aprovado${aprov !== 1 ? 's' : ''}${reprov > 0 ? ` · ${reprov} reprovado${reprov !== 1 ? 's' : ''}` : ''}.
     </div>` : ''}
 
     <!-- Abas -->
-    <div style="display:flex;border-bottom:1px solid var(--gray-light);background:var(--white-smoke);padding:0 1rem">
+    <div class="detalhe-tabs-wrap">
       <button class="detalhe-tab active" onclick="trocarAbaDetalhe('resumo',this)" id="tab-resumo">📋 Resumo</button>
       <button class="detalhe-tab" onclick="trocarAbaDetalhe('financeiro',this)" id="tab-financeiro">💰 Financeiro</button>
-      <button class="detalhe-tab" onclick="trocarAbaDetalhe('alunos',this)" id="tab-alunos">🎒 Alunos <span style="background:var(--blue);color:white;border-radius:1rem;padding:0 0.45rem;font-size:0.7rem;margin-left:0.25rem">${alunos.length}</span></button>
+      <button class="detalhe-tab" onclick="trocarAbaDetalhe('alunos',this)" id="tab-alunos">🎒 Alunos<span class="tab-count">${alunos.length}</span></button>
       <button class="detalhe-tab" onclick="trocarAbaDetalhe('historico',this)" id="tab-historico">🕐 Histórico</button>
     </div>
 
     <div class="modal-body">
 
       <!-- ABA: Resumo -->
-      <div id="aba-resumo" class="detalhe-aba" style="padding:1.25rem;display:flex;flex-direction:column;gap:1rem">
+      <div id="aba-resumo" class="detalhe-aba" style="padding:1.25rem 1.5rem;display:flex;flex-direction:column;gap:1rem">
 
-        ${GUIAS[s.status] ? `
+        ${guiaBtnLabel ? `
         <div>
-          <button class="btn btn-secondary btn-sm" onclick="abrirGuiaModal('${id}')">${{ pendente:'📋 Como Avaliar', em_analise:'🔍 Como Prosseguir', aprovado:'🎓 Próximos Passos' }[s.status] || 'Guia'}</button>
+          <button class="btn btn-secondary btn-sm" onclick="abrirGuiaModal('${id}')">${guiaBtnLabel}</button>
         </div>` : ''}
 
-        <div id="ultima-nota-display" style="display:none;background:var(--white-smoke);border:1px solid var(--gray-light);border-left:3px solid var(--blue);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:0.625rem 0.875rem">
-          <div style="font-size:0.63rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--gray);margin-bottom:0.25rem">💬 Última nota</div>
+        <div id="ultima-nota-display" style="display:none;background:#fffbeb;border:1px solid #fde68a;border-left:3px solid #f59e0b;border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:0.625rem 0.875rem">
+          <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#92400e;margin-bottom:0.2rem">💬 Última nota interna</div>
           <div id="ultima-nota-texto" style="font-size:0.82rem;color:var(--navy-mid);line-height:1.55;white-space:pre-wrap"></div>
           <div id="ultima-nota-meta" style="font-size:0.7rem;color:var(--gray);margin-top:0.25rem"></div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.875rem">
           <div class="detalhe-section" style="margin:0">
-            <div class="detalhe-section-title">Motivo da Transferência</div>
+            <div class="detalhe-section-title">📝 Motivo da Transferência</div>
             <div class="detalhe-section-body">
-              <p style="font-size:0.85rem;color:var(--navy-mid);line-height:1.6;margin:0">${s.motivo_transferencia || '–'}</p>
+              <p style="font-size:0.855rem;color:var(--navy-mid);line-height:1.65;margin:0">${escapeHtml(s.motivo_transferencia || '–')}</p>
             </div>
           </div>
           <div class="detalhe-section" style="margin:0">
-            <div class="detalhe-section-title">Por que escolheu o Colégio Plenus</div>
+            <div class="detalhe-section-title">⭐ Por que escolheu o Colégio Plenus</div>
             <div class="detalhe-section-body">
-              <p style="font-size:0.85rem;color:var(--navy-mid);line-height:1.6;margin:0">${s.motivo_escolha_plenus || '–'}</p>
+              <p style="font-size:0.855rem;color:var(--navy-mid);line-height:1.65;margin:0">${escapeHtml(s.motivo_escolha_plenus || '–')}</p>
             </div>
           </div>
         </div>
 
-        <p style="text-align:center;font-size:0.72rem;color:var(--gray);margin:0">
+        <p style="text-align:center;font-size:0.715rem;color:var(--gray);margin:0;padding-top:0.625rem;border-top:1px solid var(--gray-light)">
           Criado em ${dataFmt} · Atualizado em ${updFmt}
         </p>
       </div>
 
       <!-- ABA: Financeiro -->
-      <div id="aba-financeiro" class="detalhe-aba" style="padding:1.25rem;display:none;flex-direction:column;gap:1.25rem">
+      <div id="aba-financeiro" class="detalhe-aba" style="padding:1.25rem 1.5rem;display:none;flex-direction:column;gap:1rem">
 
         <!-- Informações do responsável (somente leitura) -->
-        <div>
-          <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--gray);margin-bottom:0.75rem">Informado pelo responsável</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
-            <div class="detalhe-section" style="margin:0">
-              <div class="detalhe-section-title">Mensalidade Atual</div>
-              <div class="detalhe-section-body">
-                <span style="font-size:1.1rem;font-weight:700;color:var(--navy-mid)">${s.valor_mensalidade_anterior ? formatarMoedaExibicao(s.valor_mensalidade_anterior) : '–'}</span>
+        <div class="fin-section">
+          <div class="fin-section-header resp-header">📋 Informado pelo responsável</div>
+          <div class="fin-section-grid">
+            <div class="fin-section-item">
+              <div class="fin-section-label">Mensalidade Atual</div>
+              <div class="fin-section-value">
+                <span style="font-size:1rem;font-weight:800;color:var(--navy-mid)">${s.valor_mensalidade_anterior ? formatarMoedaExibicao(s.valor_mensalidade_anterior) : '–'}</span>
               </div>
             </div>
-            <div class="detalhe-section" style="margin:0">
-              <div class="detalhe-section-title">Desconto Almejado</div>
-              <div class="detalhe-section-body">
-                <span style="font-size:1.1rem;font-weight:700;color:var(--navy-mid)">${s.taxa_desconto_almejada ? s.taxa_desconto_almejada + '%' : '–'}</span>
+            <div class="fin-section-item">
+              <div class="fin-section-label">Desconto Almejado</div>
+              <div class="fin-section-value">
+                <span style="font-size:1rem;font-weight:800;color:var(--navy-mid)">${s.taxa_desconto_almejada ? s.taxa_desconto_almejada + '%' : '–'}</span>
               </div>
             </div>
-            <div class="detalhe-section" style="margin:0">
-              <div class="detalhe-section-title">Desconto Atual</div>
-              <div class="detalhe-section-body">
-                <span style="font-size:0.875rem;font-weight:600;color:var(--navy-mid)">${s.tem_desconto ? 'Sim' : 'Não'}</span>
-                ${s.tem_desconto && s.descricao_desconto ? `<p style="font-size:0.82rem;color:var(--gray-dark);margin:0.25rem 0 0">${escapeHtml(s.descricao_desconto)}</p>` : ''}
-              </div>
+            <div class="fin-section-item">
+              <div class="fin-section-label">Possui Desconto Atual?</div>
+              <div class="fin-section-value">${s.tem_desconto ? '✅ Sim' : '❌ Não'}</div>
+              ${s.tem_desconto && s.descricao_desconto ? `<div style="font-size:0.78rem;color:var(--gray-dark);margin-top:0.3rem">${escapeHtml(s.descricao_desconto)}</div>` : ''}
             </div>
-            <div class="detalhe-section" style="margin:0">
-              <div class="detalhe-section-title">Permuta Solicitada</div>
-              <div class="detalhe-section-body">
-                <span style="font-size:0.875rem;font-weight:600;color:var(--navy-mid)">${PERMUTA_LABEL[s.tipo_permuta] || '–'}</span>
-                ${s.tipo_permuta !== 'nao' && s.descricao_permuta ? `<p style="font-size:0.82rem;color:var(--gray-dark);margin:0.25rem 0 0">${escapeHtml(s.descricao_permuta)}</p>` : ''}
-              </div>
+            <div class="fin-section-item">
+              <div class="fin-section-label">Permuta Solicitada</div>
+              <div class="fin-section-value">${PERMUTA_LABEL[s.tipo_permuta] || '–'}</div>
+              ${s.tipo_permuta !== 'nao' && s.descricao_permuta ? `<div style="font-size:0.78rem;color:var(--gray-dark);margin-top:0.3rem">${escapeHtml(s.descricao_permuta)}</div>` : ''}
             </div>
           </div>
         </div>
 
-        <!-- Decisão da escola (editável por colaboradores) -->
-        <div>
-          <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--gray);margin-bottom:0.75rem">Decisão da escola</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
-            <div class="detalhe-section" style="margin:0">
-              <div class="detalhe-section-title" style="justify-content:space-between">
+        <!-- Decisão da escola (editável) -->
+        <div class="fin-section">
+          <div class="fin-section-header escola-header">🏫 Decisão da escola</div>
+          <div class="fin-section-grid">
+            <div class="fin-section-item">
+              <div class="fin-section-label">
                 Desconto Concedido
-                <button class="btn btn-secondary btn-sm" style="font-size:0.68rem;padding:0.2rem 0.5rem" onclick="editarFinanceiro('${id}','desconto')">✏️ Editar</button>
+                <button class="btn btn-secondary btn-sm" style="font-size:0.65rem;padding:0.12rem 0.4rem" onclick="editarFinanceiro('${id}','desconto')">✏️ Editar</button>
               </div>
-              <div class="detalhe-section-body" id="fin-desconto-display">
-                ${s.desconto_concedido ? `<span style="font-size:0.95rem;font-weight:700;color:#15803d">${escapeHtml(s.desconto_concedido)}</span>` : '<span style="color:var(--gray);font-size:0.85rem">Não informado</span>'}
+              <div id="fin-desconto-display" class="fin-section-value">
+                ${s.desconto_concedido
+                  ? `<span style="color:#15803d;font-weight:700">${escapeHtml(s.desconto_concedido)}</span>`
+                  : '<span style="color:var(--gray);font-weight:400;font-size:0.82rem">Não informado</span>'}
               </div>
             </div>
-            <div class="detalhe-section" style="margin:0">
-              <div class="detalhe-section-title" style="justify-content:space-between">
+            <div class="fin-section-item">
+              <div class="fin-section-label">
                 Permuta
-                <button class="btn btn-secondary btn-sm" style="font-size:0.68rem;padding:0.2rem 0.5rem" onclick="editarFinanceiro('${id}','permuta')">✏️ Editar</button>
+                <button class="btn btn-secondary btn-sm" style="font-size:0.65rem;padding:0.12rem 0.4rem" onclick="editarFinanceiro('${id}','permuta')">✏️ Editar</button>
               </div>
-              <div class="detalhe-section-body" id="fin-permuta-display">
+              <div id="fin-permuta-display" class="fin-section-value">
                 ${s.permuta_aceita !== null && s.permuta_aceita !== undefined
-                  ? `<span style="font-size:0.875rem;font-weight:700;color:${s.permuta_aceita ? '#15803d' : '#dc2626'}">${s.permuta_aceita ? '✅ Aceita' : '❌ Não aceita'}</span>`
-                  : '<span style="color:var(--gray);font-size:0.85rem">Não informado</span>'}
-                ${s.permuta_aceita && s.condicoes_permuta_aceita ? `<p style="font-size:0.82rem;color:var(--gray-dark);margin:0.25rem 0 0">${escapeHtml(s.condicoes_permuta_aceita)}</p>` : ''}
+                  ? `<span style="font-weight:700;color:${s.permuta_aceita ? '#15803d' : '#dc2626'}">${s.permuta_aceita ? '✅ Aceita' : '❌ Não aceita'}</span>`
+                  : '<span style="color:var(--gray);font-weight:400;font-size:0.82rem">Não informado</span>'}
+                ${s.permuta_aceita && s.condicoes_permuta_aceita ? `<div style="font-size:0.78rem;color:var(--gray-dark);margin-top:0.3rem">${escapeHtml(s.condicoes_permuta_aceita)}</div>` : ''}
               </div>
             </div>
           </div>
@@ -1205,14 +1204,14 @@ function abrirDetalhe(id) {
       </div>
 
       <!-- ABA: Alunos -->
-      <div id="aba-alunos" class="detalhe-aba" style="display:none;flex-direction:column">
-        <div id="alunos-detalhe-lista" style="${alunos.length ? 'gap:0' : ''}">
+      <div id="aba-alunos" class="detalhe-aba" style="display:none;flex-direction:column;padding:0.875rem 1rem;gap:0.75rem">
+        <div id="alunos-detalhe-lista" style="display:flex;flex-direction:column;gap:0.75rem">
           ${renderAlunosDetalhe(alunos, id)}
         </div>
       </div>
 
       <!-- ABA: Histórico -->
-      <div id="aba-historico" class="detalhe-aba" style="padding:1.25rem;display:none;flex-direction:column;gap:1rem">
+      <div id="aba-historico" class="detalhe-aba" style="padding:1.25rem 1.5rem;display:none;flex-direction:column;gap:1rem">
         <div style="display:flex;justify-content:flex-end">
           <button class="btn btn-secondary btn-sm" onclick="abrirObsModal('')">+ Adicionar Nota</button>
         </div>
@@ -1471,52 +1470,72 @@ function renderAlunosDetalhe(alunos, interesseId) {
     const statusAluno = a.status_aluno || 'pendente';
     const aprovado    = statusAluno === 'aprovado';
     const reprovado   = statusAluno === 'reprovado';
+    const matriculado = statusAluno === 'matriculado';
     const alocacao    = a.alocacoes?.[0];
     const turmaInfo   = alocacao?.turmas
       ? `${alocacao.turmas.serie} – ${alocacao.turmas.nome_turma} (${TURNO_LABEL_FULL[alocacao.turmas.turno] || alocacao.turmas.turno})`
       : null;
-    return `
-      <div class="aluno-detalhe-item" id="aluno-row-${a.id}" style="flex-direction:column;align-items:stretch;padding:0.875rem 1rem;gap:0.625rem">
-        <div style="display:flex;align-items:center;gap:0.625rem;flex-wrap:wrap">
-          <div class="aluno-badge" style="width:28px;height:28px;font-size:0.75rem;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--blue),#60a5fa);border-radius:50%;color:white;font-weight:800">${i+1}</div>
-          <div style="flex:1;min-width:0">
-            <div style="font-weight:700;font-size:0.875rem;color:var(--navy-mid)">${escapeHtml(a.nome_aluno)}</div>
-            <div style="font-size:0.78rem;color:var(--gray-dark)">${SEGMENTO_LABEL[a.segmento] || a.segmento} · ${a.turma} · ${TURNO_LABEL[a.turno] || a.turno}</div>
+
+    const infoBody = [
+      reprovado && a.motivo_reprovacao ? `
+        <div class="aluno-detalhe-card-body">
+          <div style="background:#fee2e2;border:1px solid #fecaca;border-radius:0.375rem;padding:0.5rem 0.75rem;font-size:0.78rem;color:#b91c1c">
+            ✕ <strong>Motivo da reprovação:</strong> ${escapeHtml(a.motivo_reprovacao)}
           </div>
-          <span class="status-badge ${STATUS_ALUNO_CLS[statusAluno]}" id="aluno-badge-${a.id}">${STATUS_ALUNO_LABEL[statusAluno]}</span>
-        </div>
-
-        ${reprovado && a.motivo_reprovacao ? `
-          <div style="background:#fee2e2;border:1px solid #fecaca;border-radius:0.5rem;padding:0.5rem 0.75rem;font-size:0.78rem;color:#dc2626">
-            <strong>Motivo:</strong> ${escapeHtml(a.motivo_reprovacao)}
-          </div>` : ''}
-
-        ${aprovado ? `
-          <div id="aluno-enturma-${a.id}" style="background:${turmaInfo ? '#f0fdf4' : '#fefce8'};border:1px solid ${turmaInfo ? '#bbf7d0' : '#fde68a'};border-radius:0.5rem;padding:0.5rem 0.75rem;font-size:0.78rem;color:${turmaInfo ? '#15803d' : '#92400e'}">
+        </div>` : '',
+      aprovado ? `
+        <div class="aluno-detalhe-card-body">
+          <div id="aluno-enturma-${a.id}" style="background:${turmaInfo ? '#f0fdf4' : '#fffbeb'};border:1px solid ${turmaInfo ? '#bbf7d0' : '#fde68a'};border-radius:0.375rem;padding:0.5rem 0.75rem;font-size:0.78rem;color:${turmaInfo ? '#15803d' : '#92400e'}">
             ${turmaInfo
-              ? `🏫 <strong>Enturmado:</strong> ${escapeHtml(turmaInfo)} — <span style="color:#0e7490">⏳ Aguardando finalização da matrícula</span>`
-              : `⏳ <strong>Aguardando enturmação</strong> — aprovado mas ainda não alocado em nenhuma turma`}
-          </div>` : ''}
+              ? `🏫 <strong>Enturmado:</strong> ${escapeHtml(turmaInfo)} <span style="color:#0e7490;margin-left:0.25rem">· Aguardando finalização</span>`
+              : `⏳ <strong>Aguardando enturmação</strong> — aprovado mas não alocado em nenhuma turma`}
+          </div>
+        </div>` : '',
+      matriculado ? `
+        <div class="aluno-detalhe-card-body">
+          <div style="background:#ecfeff;border:1px solid #a5f3fc;border-radius:0.375rem;padding:0.5rem 0.75rem;font-size:0.78rem;color:#0e7490">
+            🎓 <strong>Matriculado</strong> — para reverter, cancele a solicitação.
+          </div>
+        </div>` : ''
+    ].filter(Boolean).join('');
 
-        <div id="aluno-acoes-${a.id}" style="display:flex;gap:0.5rem;flex-wrap:wrap">
-          ${statusAluno === 'matriculado' ? `
-            <span style="font-size:0.78rem;color:#0e7490;font-style:italic">✔ Matriculado — para reverter, cancele a solicitação.</span>
-          ` : `
-            ${!aprovado ? `<button class="btn btn-success btn-sm" onclick="aprovarAluno('${a.id}','${interesseId}')">✅ Aprovar</button>` : ''}
-            ${aprovado && turmaInfo ? `<button class="btn btn-primary btn-sm" onclick="confirmarMatriculaAluno('${a.id}','${interesseId}')">🎓 Matricular</button>` : ''}
-            ${aprovado && !turmaInfo ? `<button class="btn btn-primary btn-sm" disabled title="Enturme o aluno antes de matricular" style="opacity:0.45;cursor:not-allowed">🎓 Matricular</button>` : ''}
-            ${!reprovado ? `<button class="btn btn-danger btn-sm" onclick="abrirReprovacaoAluno('${a.id}','${interesseId}')">✕ Reprovar</button>` : ''}
-            ${(aprovado || reprovado) ? `<button class="btn btn-secondary btn-sm" onclick="resetarAluno('${a.id}','${interesseId}')">↩ Desfazer</button>` : ''}
-          `}
+    return `
+      <div class="aluno-detalhe-card aluno-${statusAluno}" id="aluno-row-${a.id}">
+
+        <!-- Cabeçalho do card -->
+        <div class="aluno-detalhe-card-head">
+          <div class="aluno-num-badge">${i + 1}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:0.9rem;color:var(--navy-mid);line-height:1.25">${escapeHtml(a.nome_aluno)}</div>
+            <div style="font-size:0.75rem;color:var(--gray-dark);margin-top:0.1rem">${SEGMENTO_LABEL[a.segmento] || a.segmento} · ${a.turma} · ${TURNO_LABEL[a.turno] || a.turno}</div>
+          </div>
+          <span class="status-badge ${STATUS_ALUNO_CLS[statusAluno]}" id="aluno-badge-${a.id}" style="font-size:0.65rem;flex-shrink:0">${STATUS_ALUNO_LABEL[statusAluno]}</span>
         </div>
 
-        <div id="form-reprovacao-${a.id}" style="display:none;flex-direction:column;gap:0.5rem">
+        ${infoBody}
+
+        <!-- Form de reprovação (hidden) -->
+        <div id="form-reprovacao-${a.id}" class="aluno-detalhe-card-form">
           <textarea id="motivo-reprovacao-${a.id}" rows="2" placeholder="Descreva o motivo da reprovação deste aluno..." style="font-size:0.82rem"></textarea>
           <div style="display:flex;gap:0.5rem;justify-content:flex-end">
             <button class="btn btn-secondary btn-sm" onclick="cancelarReprovacaoAluno('${a.id}')">Cancelar</button>
             <button class="btn btn-danger btn-sm" onclick="confirmarReprovacaoAluno('${a.id}','${interesseId}')">✕ Confirmar Reprovação</button>
           </div>
         </div>
+
+        <!-- Ações -->
+        <div id="aluno-acoes-${a.id}" class="aluno-detalhe-card-actions">
+          ${matriculado ? `
+            <span style="font-size:0.78rem;color:#0e7490;font-style:italic;padding:0.1rem 0">✔ Matriculado</span>
+          ` : `
+            ${!aprovado && !reprovado ? `<button class="btn btn-success btn-sm" onclick="aprovarAluno('${a.id}','${interesseId}')">✅ Aprovar</button>` : ''}
+            ${aprovado && turmaInfo  ? `<button class="btn btn-primary btn-sm" onclick="confirmarMatriculaAluno('${a.id}','${interesseId}')">🎓 Matricular</button>` : ''}
+            ${aprovado && !turmaInfo ? `<button class="btn btn-primary btn-sm" disabled title="Enturme o aluno antes de matricular" style="opacity:0.45;cursor:not-allowed">🎓 Matricular</button>` : ''}
+            ${!reprovado ? `<button class="btn btn-danger btn-sm" onclick="abrirReprovacaoAluno('${a.id}','${interesseId}')">✕ Reprovar</button>` : ''}
+            ${(aprovado || reprovado) ? `<button class="btn btn-secondary btn-sm" onclick="resetarAluno('${a.id}','${interesseId}')">↩ Desfazer</button>` : ''}
+          `}
+        </div>
+
       </div>`;
   }).join('');
 }

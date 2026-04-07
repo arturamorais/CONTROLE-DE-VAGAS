@@ -1470,3 +1470,201 @@ button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
   .rel-kpi-grid  { grid-template-columns: 1fr 1fr; }
   .rel-kpi-value { font-size: 1.45rem; }
 }
+
+/* ============================================================
+   ADMIN CARD – ENHANCED
+   ============================================================ */
+.solicitacao-admin-card {
+  background: white;
+  border-radius: var(--radius);
+  padding: 1.125rem 1.25rem;
+  border: 1px solid var(--gray-light);
+  border-left: 4px solid var(--gray-light);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.solicitacao-admin-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  border-color: #bfdbfe;
+  border-left-width: 4px;
+}
+.solicitacao-admin-card.border-cancelado   { border-left-color: #7c3aed; }
+.solicitacao-admin-card.border-matriculado { border-left-color: #0e7490; }
+
+/* ============================================================
+   MODAL DETALHE – FINANCIAL SECTIONS
+   ============================================================ */
+.fin-section {
+  border: 1px solid var(--gray-light);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.fin-section-header {
+  padding: 0.55rem 1rem;
+  font-size: 0.67rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--gray-light);
+}
+.fin-section-header.resp-header {
+  background: var(--white-smoke);
+  color: var(--gray-dark);
+}
+.fin-section-header.escola-header {
+  background: #fffbeb;
+  color: #92400e;
+  border-bottom-color: #fde68a;
+}
+.fin-section-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.fin-section-item {
+  padding: 0.875rem 1rem;
+  border-right: 1px solid var(--gray-light);
+  border-bottom: 1px solid var(--gray-light);
+}
+.fin-section-item:nth-child(even) { border-right: none; }
+.fin-section-item:nth-last-child(-n+2) { border-bottom: none; }
+.fin-section-item:last-child:nth-child(odd) { border-bottom: none; }
+.fin-section-label {
+  font-size: 0.615rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gray);
+  margin-bottom: 0.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem;
+}
+.fin-section-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--navy-mid);
+  line-height: 1.45;
+}
+
+/* ============================================================
+   MODAL DETALHE – ALUNO CARD
+   ============================================================ */
+.aluno-detalhe-card {
+  border: 1.5px solid var(--gray-light);
+  border-left: 4px solid var(--gray-light);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: white;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.aluno-detalhe-card:hover { box-shadow: var(--shadow); }
+.aluno-detalhe-card.aluno-pendente   { border-left-color: var(--amber); }
+.aluno-detalhe-card.aluno-aprovado   { border-left-color: var(--green); }
+.aluno-detalhe-card.aluno-reprovado  { border-left-color: var(--red); }
+.aluno-detalhe-card.aluno-matriculado{ border-left-color: #0e7490; }
+
+.aluno-detalhe-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--white-smoke);
+  border-bottom: 1px solid var(--gray-light);
+}
+.aluno-num-badge {
+  width: 30px; height: 30px;
+  font-size: 0.78rem; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, var(--blue), #60a5fa);
+  border-radius: 50%; color: white; font-weight: 800;
+  box-shadow: 0 2px 6px rgba(59,130,246,0.28);
+}
+.aluno-detalhe-card-body {
+  padding: 0.625rem 1rem;
+  border-bottom: 1px solid var(--gray-light);
+}
+.aluno-detalhe-card-actions {
+  display: flex; gap: 0.375rem; flex-wrap: wrap;
+  padding: 0.625rem 1rem;
+  background: var(--white-smoke);
+}
+.aluno-detalhe-card-form {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #fecaca;
+  background: #fef2f2;
+  flex-direction: column;
+  gap: 0.5rem;
+  display: none;
+}
+
+/* ============================================================
+   MODAL DETALHE – TAB PILL STYLE
+   ============================================================ */
+.detalhe-tabs-wrap {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--gray-light);
+  background: white;
+  padding: 0.625rem 1.25rem 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.detalhe-tab {
+  background: none;
+  border: none;
+  border-bottom: 2.5px solid transparent;
+  padding: 0.65rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--gray-dark);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+  flex-shrink: 0;
+}
+.detalhe-tab:hover { color: var(--navy-mid); }
+.detalhe-tab.active {
+  color: var(--blue);
+  border-bottom-color: var(--blue);
+}
+.tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--blue);
+  color: white;
+  border-radius: 1rem;
+  padding: 0 0.45rem;
+  font-size: 0.67rem;
+  margin-left: 0.3rem;
+  min-width: 18px;
+  height: 18px;
+  font-weight: 700;
+}
+
+/* ============================================================
+   MODAL DETALHE – STATUS HEADER GRADIENTS
+   ============================================================ */
+.modal-head-pendente   { background: linear-gradient(135deg, #fefce8 0%, #ffffff 65%); }
+.modal-head-em_analise { background: linear-gradient(135deg, #eff6ff 0%, #ffffff 65%); }
+.modal-head-aprovado   { background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 65%); }
+.modal-head-reprovado  { background: linear-gradient(135deg, #fef2f2 0%, #ffffff 65%); }
+.modal-head-cancelado  { background: linear-gradient(135deg, #faf5ff 0%, #ffffff 65%); }
+.modal-head-matriculado{ background: linear-gradient(135deg, #ecfeff 0%, #ffffff 65%); }
+
+@media (max-width: 640px) {
+  .fin-section-grid { grid-template-columns: 1fr; }
+  .fin-section-item { border-right: none; }
+  .fin-section-item:nth-last-child(-n+2) { border-bottom: 1px solid var(--gray-light); }
+  .fin-section-item:last-child { border-bottom: none; }
+}
