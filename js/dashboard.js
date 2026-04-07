@@ -28,6 +28,7 @@ let alunoCounter          = 0;
 let modoEdicao            = false;
 let solicitacaoEditandoId = null;
 let _solicitacoesResp     = [];
+let _dadosOriginaisEdicao = null;
 
 // ============================================================
 //  LOGGING
@@ -472,6 +473,7 @@ async function editarSolicitacao(id) {
 
   modoEdicao            = true;
   solicitacaoEditandoId = id;
+  _dadosOriginaisEdicao = data;
 
   // Preencher campos gerais
   document.getElementById('motivo-transferencia').value = data.motivo_transferencia  || '';
@@ -512,12 +514,46 @@ async function editarSolicitacao(id) {
 function cancelarEdicao() {
   modoEdicao            = false;
   solicitacaoEditandoId = null;
+  _dadosOriginaisEdicao = null;
   limparFormulario();
   document.getElementById('btn-enviar').innerHTML           = '📤 Enviar Solicitação';
   document.getElementById('form-title').textContent         = 'Nova Solicitação de Vaga';
   document.getElementById('form-subtitle').textContent      = 'Preencha as informações abaixo para solicitar uma vaga no Colégio Plenus';
   document.getElementById('edit-mode-banner').style.display = 'none';
   document.getElementById('form-alert').innerHTML           = '';
+}
+
+function _buildMsgEdicao(novosCampos, novosAlunos) {
+  if (!_dadosOriginaisEdicao) return 'Solicitação editada pelo responsável.';
+
+  const orig = _dadosOriginaisEdicao;
+  const alteracoes = [];
+
+  const LABELS = {
+    motivo_transferencia:       'Motivo de transferência',
+    motivo_escolha_plenus:      'Motivo de escolha do Plenus',
+    valor_mensalidade_anterior: 'Mensalidade atual',
+    tem_desconto:               'Possui desconto atual',
+    descricao_desconto:         'Descrição do desconto',
+    taxa_desconto_almejada:     'Desconto almejado',
+    tipo_permuta:               'Tipo de permuta',
+    descricao_permuta:          'Descrição da permuta',
+  };
+
+  for (const [campo, label] of Object.entries(LABELS)) {
+    if (String(orig[campo] ?? '') !== String(novosCampos[campo] ?? '')) {
+      alteracoes.push(label);
+    }
+  }
+
+  const strAluno = a => `${a.nome_aluno}|${a.segmento}|${a.turma}|${a.turno}`;
+  const antStr = (orig.alunos || []).map(strAluno).sort().join(';');
+  const novStr = novosAlunos.map(strAluno).sort().join(';');
+  if (antStr !== novStr) alteracoes.push('Alunos');
+
+  return alteracoes.length
+    ? `Solicitação editada pelo responsável. Campos alterados: ${alteracoes.join(', ')}.`
+    : 'Solicitação editada pelo responsável (nenhuma alteração detectada).';
 }
 
 // ============================================================
@@ -589,7 +625,8 @@ async function enviarSolicitacao() {
     btn.disabled = false; btn.innerHTML = '💾 Salvar Alterações';
     if (errA) return setAlert(alertDiv, `Erro ao salvar alunos: ${errA.message}`, 'error');
     await registrarLog('editar_solicitacao', 'interesse_vagas', solicitacaoEditandoId, `Solicitação editada (${alunos.length} aluno(s))`);
-    await registrarHistorico(solicitacaoEditandoId, 'Solicitação editada pelo responsável', 'responsavel');
+    await registrarHistorico(solicitacaoEditandoId, _buildMsgEdicao(campos, alunos), 'responsavel');
+    _dadosOriginaisEdicao = null;
     setAlert(alertDiv, '✅ Solicitação atualizada com sucesso!', 'success');
     cancelarEdicao();
   } else {
