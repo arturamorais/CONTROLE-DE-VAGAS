@@ -1294,8 +1294,8 @@ async function editarFinanceiro(id, campo) {
 
           <div id="condicoes-wrap" style="display:${valorInicial === 'sim' ? 'block' : 'none'}">
             <label style="font-size:0.78rem;font-weight:700;color:#475569;display:block;margin-bottom:0.375rem;text-transform:uppercase;letter-spacing:0.04em">Condições acordadas</label>
-            <textarea id="swal-condicoes" rows="3"
-              style="width:100%;padding:0.625rem 0.75rem;border:1.5px solid #e2e8f0;border-radius:0.5rem;font-size:0.85rem;font-family:inherit;resize:vertical;outline:none;color:#0f172a;line-height:1.5"
+            <textarea id="swal-condicoes" rows="6"
+              style="width:100%;padding:0.625rem 0.75rem;border:1.5px solid #e2e8f0;border-radius:0.5rem;font-size:0.85rem;font-family:inherit;resize:vertical;outline:none;color:#0f172a;line-height:1.5;min-height:120px"
               placeholder="Descreva as condições da permuta...">${escapeHtml(s.condicoes_permuta_aceita || '')}</textarea>
           </div>
 
