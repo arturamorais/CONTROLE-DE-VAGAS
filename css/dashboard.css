@@ -1009,10 +1009,10 @@ button { cursor: pointer; font-family: inherit; }
 .historico-dot.colaborador { background: var(--orange); }
 
 .historico-info { display: flex; flex-direction: column; gap: 0.05rem; }
-.historico-desc { font-weight: 600; color: var(--navy-mid); white-space: pre-line; }
-.historico-desc.h-collapsed { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; white-space: pre-line; }
+.historico-desc { font-weight: 600; color: var(--navy-mid); white-space: pre-line; display: block; }
+.historico-desc.h-collapsed { max-height: 4.2em; overflow: hidden; }
 .historico-meta { font-size: 0.7rem; color: var(--gray); }
-.ver-mais-btn { background: none; border: none; color: var(--blue); font-size: 0.7rem; font-weight: 700; cursor: pointer; padding: 1px 0 0; display: inline-block; }
+.ver-mais-btn { background: none; border: none; color: var(--blue); font-size: 0.7rem; font-weight: 700; cursor: pointer; padding: 1px 0 0; display: block; }
 
 /* Acessibilidade */
 button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }

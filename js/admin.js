@@ -1928,8 +1928,8 @@ function toggleVerMais(btn) {
 function _histDescHtml(descricao) {
   const escaped = escapeHtml(descricao || '');
   const isLong  = (descricao || '').length > 120 || (descricao || '').includes('\n');
-  if (!isLong) return `<span class="historico-desc">${escaped}</span>`;
-  return `<span class="historico-desc h-collapsed">${escaped}</span>`
+  if (!isLong) return `<div class="historico-desc">${escaped}</div>`;
+  return `<div class="historico-desc h-collapsed">${escaped}</div>`
        + `<button class="ver-mais-btn" onclick="toggleVerMais(this)">ver mais ▾</button>`;
 }
 
