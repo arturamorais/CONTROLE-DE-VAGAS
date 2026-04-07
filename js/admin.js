@@ -1617,6 +1617,7 @@ const STATUS_ALUNO_CLS   = { pendente: 'status-pendente', aprovado: 'status-apro
 
 function renderAlunosDetalhe(alunos, interesseId) {
   if (!alunos.length) return '<p style="padding:1rem;color:var(--gray);font-size:0.85rem">Nenhum aluno cadastrado.</p>';
+  const solStatus = todasSolicitacoes.find(x => x.id === interesseId)?.status || 'pendente';
   return alunos.map((a, i) => {
     const statusAluno = a.status_aluno || 'pendente';
     const aprovado    = statusAluno === 'aprovado';
@@ -1678,12 +1679,16 @@ function renderAlunosDetalhe(alunos, interesseId) {
         <div id="aluno-acoes-${a.id}" class="aluno-detalhe-card-actions">
           ${matriculado ? `
             <span style="font-size:0.78rem;color:#0e7490;font-style:italic;padding:0.1rem 0">✔ Matriculado</span>
-          ` : `
+          ` : solStatus === 'em_analise' ? `
             ${!aprovado && !reprovado ? `<button class="btn btn-success btn-sm" onclick="aprovarAluno('${a.id}','${interesseId}')">✅ Aprovar</button>` : ''}
-            ${aprovado && turmaInfo  ? `<button class="btn btn-primary btn-sm" onclick="confirmarMatriculaAluno('${a.id}','${interesseId}')">🎓 Matricular</button>` : ''}
-            ${aprovado && !turmaInfo ? `<button class="btn btn-primary btn-sm" disabled title="Enturme o aluno antes de matricular" style="opacity:0.45;cursor:not-allowed">🎓 Matricular</button>` : ''}
             ${!reprovado ? `<button class="btn btn-danger btn-sm" onclick="abrirReprovacaoAluno('${a.id}','${interesseId}')">✕ Reprovar</button>` : ''}
             ${(aprovado || reprovado) ? `<button class="btn btn-secondary btn-sm" onclick="resetarAluno('${a.id}','${interesseId}')">↩ Desfazer</button>` : ''}
+          ` : solStatus === 'aprovado' ? `
+            ${aprovado && turmaInfo  ? `<button class="btn btn-primary btn-sm" onclick="confirmarMatriculaAluno('${a.id}','${interesseId}')">🎓 Matricular</button>` : ''}
+            ${aprovado && !turmaInfo ? `<button class="btn btn-primary btn-sm" disabled title="Enturme o aluno antes de matricular" style="opacity:0.45;cursor:not-allowed">🎓 Matricular</button>` : ''}
+            ${(aprovado || reprovado) ? `<button class="btn btn-secondary btn-sm" onclick="resetarAluno('${a.id}','${interesseId}')">↩ Desfazer</button>` : ''}
+          ` : `
+            <span style="font-size:0.75rem;color:var(--gray);font-style:italic">Nenhuma ação disponível neste status.</span>
           `}
         </div>
 
@@ -1695,6 +1700,7 @@ async function confirmarMatriculaAluno(alunoId, interesseId) {
   const sol   = todasSolicitacoes.find(s => s.id === interesseId);
   const aluno = sol?.alunos?.find(a => a.id === alunoId);
   if (!aluno) return;
+  if (sol?.status !== 'aprovado') { showToast('⚠️ A solicitação precisa estar Aprovada para matricular alunos.'); return; }
 
   const alocacao  = aluno.alocacoes?.[0];
   const turmaInfo = alocacao?.turmas
@@ -1758,6 +1764,8 @@ async function confirmarMatriculaAluno(alunoId, interesseId) {
 }
 
 async function aprovarAluno(alunoId, interesseId) {
+  const _sol = todasSolicitacoes.find(x => x.id === interesseId);
+  if (_sol?.status !== 'em_analise') { showToast('⚠️ A solicitação precisa estar Em Análise para aprovar alunos.'); return; }
   const { data: upd, error } = await cliente.from('alunos')
     .update({ status_aluno: 'aprovado', motivo_reprovacao: null })
     .eq('id', alunoId)
@@ -1790,6 +1798,8 @@ function cancelarReprovacaoAluno(alunoId) {
 }
 
 async function confirmarReprovacaoAluno(alunoId, interesseId) {
+  const _sol = todasSolicitacoes.find(x => x.id === interesseId);
+  if (_sol?.status !== 'em_analise') { showToast('⚠️ A solicitação precisa estar Em Análise para reprovar alunos.'); return; }
   const motivo = document.getElementById(`motivo-reprovacao-${alunoId}`).value.trim();
   if (!motivo) { showToast('⚠️ Descreva o motivo da reprovação.'); return; }
 
@@ -1815,6 +1825,7 @@ async function confirmarReprovacaoAluno(alunoId, interesseId) {
 
 async function resetarAluno(alunoId, interesseId) {
   const s     = todasSolicitacoes.find(x => x.id === interesseId);
+  if (!['em_analise', 'aprovado'].includes(s?.status)) { showToast('⚠️ Não é possível desfazer o status do aluno neste momento.'); return; }
   const aluno = s?.alunos?.find(a => a.id === alunoId);
   const nome  = aluno?.nome_aluno || 'Aluno';
 
@@ -1864,7 +1875,17 @@ async function resetarAluno(alunoId, interesseId) {
     ? `Status do aluno "${nome}" revertido para Pendente. Removido da turma ${turmaInfo}.`
     : `Status do aluno "${nome}" revertido para Pendente.`;
   await registrarHistorico(interesseId, notaHist, nomeColab);
-  await atualizarStatusGeral(interesseId);
+
+  // Se a solicitação estava Aprovada, regride para Em Análise
+  if (s?.status === 'aprovado') {
+    await cliente.from('interesse_vagas').update({ status: 'em_analise' }).eq('id', interesseId);
+    s.status = 'em_analise';
+    await registrarHistorico(interesseId, 'Solicitação revertida para Em Análise — reavaliação necessária.', nomeColab);
+    await carregarStats();
+    await carregarUltimasSolicitacoes();
+  } else {
+    await atualizarStatusGeral(interesseId);
+  }
 
   recarregarAlunosDetalhe(interesseId);
   showToast(turmaInfo ? `↩ ${nome} voltou para Pendente e foi removido da turma.` : `↩ ${nome} voltou para Pendente.`);
@@ -1993,8 +2014,7 @@ function gerarBotoesStatus(status, id) {
 
   const acoes = {
     pendente:   [
-      { s: 'em_analise', label: '🔍 Em Análise', cls: 'btn-secondary' },
-      { s: 'aprovado',   label: '✅ Aprovar',    cls: 'btn-success'   }
+      { s: 'em_analise', label: '🔍 Em Análise', cls: 'btn-secondary' }
     ],
     em_analise: [
       { s: 'pendente',   label: '↩ Pendente',   cls: 'btn-secondary' },
