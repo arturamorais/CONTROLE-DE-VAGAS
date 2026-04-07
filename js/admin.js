@@ -1470,6 +1470,7 @@ async function imprimirFicha(id) {
       /* Footer */
       .doc-footer { border-top: 1px solid #e2e8f0; padding: 12px 28px; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #94a3b8; }
 
+      @page { size: landscape; margin: 12mm 14mm; }
       @media print {
         body { background: white; }
         .page { max-width: 100%; }
