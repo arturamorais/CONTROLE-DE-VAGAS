@@ -1446,7 +1446,7 @@ async function imprimirFicha(id) {
       .content { padding: 12px 20px 8px; display: flex; flex-direction: column; gap: 10px; flex: 1; overflow: hidden; }
 
       /* Two-column row */
-      .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; }
+      .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; flex-shrink: 0; }
 
       /* Anotações */
       .anotacoes-wrap { display: flex; flex-direction: column; flex: 1; min-height: 0; }
